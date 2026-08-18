@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard - Nemonics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen relative overflow-x-hidden">
+
+    <!-- Background Gradient Glows -->
+    <div class="absolute top-0 right-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute bottom-1/4 left-1/4 w-96 h-96 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="flex min-h-screen relative z-10">
+        
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="w-72 border-r border-slate-800/80 bg-slate-900/50 backdrop-blur-xl p-6 flex flex-col justify-between hidden md:flex">
+            <div class="space-y-8">
+                <!-- Brand / Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-600 to-indigo-600 flex items-center justify-center font-extrabold text-lg shadow-lg shadow-cyan-500/30">N</div>
+                    <div>
+                        <h2 class="font-extrabold text-slate-100 tracking-wide">Nemonics</h2>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">User Panel</p>
+                    </div>
+                </div>
+
+                <!-- Nav Links -->
+                <nav class="space-y-2">
+                    <button onclick="switchUserTab('analytics')" id="utab-analytics" class="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-sm transition-all duration-300 bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-lg shadow-cyan-600/30">
+                        <span>📊</span> Analytics & Calendar
+                    </button>
+                    <button onclick="switchUserTab('links')" id="utab-links" class="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-sm transition-all duration-300 text-slate-400 hover:text-white hover:bg-slate-800/50">
+                        <span>🔗</span> My Active Links
+                    </button>
+                    <button onclick="switchUserTab('earnings')" id="utab-earnings" class="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-sm transition-all duration-300 text-slate-400 hover:text-white hover:bg-slate-800/50">
+                        <span>💰</span> Earnings & Payouts
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Sidebar Footer / Logout -->
+            <div class="pt-6 border-t border-slate-800/80">
+                <button onclick="logout()" class="w-full flex items-center justify-center gap-2 bg-rose-500/10 border border-rose-500/35 text-rose-400 hover:bg-rose-500 hover:text-white py-3 rounded-2xl font-semibold transition-all duration-300 text-sm">
+                    🚪 Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 p-6 lg:p-10 space-y-6 overflow-y-auto">
+            
+            <!-- Mobile Header -->
+            <header class="flex md:hidden justify-between items-center glass-card p-4 rounded-2xl mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 flex items-center justify-center font-bold text-sm">N</div>
+                    <h1 class="font-bold text-sm" id="mobileWelcomeText">Welcome</h1>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="switchUserTab('analytics')" class="p-2 bg-slate-800 rounded-xl text-xs">📊</button>
+                    <button onclick="switchUserTab('links')" class="p-2 bg-slate-800 rounded-xl text-xs">🔗</button>
+                    <button onclick="switchUserTab('earnings')" class="p-2 bg-slate-800 rounded-xl text-xs">💰</button>
+                    <button onclick="logout()" class="p-2 bg-rose-500/20 text-rose-400 rounded-xl text-xs">🚪</button>
+                </div>
+            </header>
+
+            <!-- Desktop Top Welcome Header -->
+            <header class="hidden md:flex justify-between items-center glass-card p-6 rounded-3xl">
+                <div>
+                    <h1 class="text-2xl font-extrabold bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent" id="welcomeText">Welcome, User</h1>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Daily tracking & performance analytics dashboard.</p>
+                </div>
+                <div class="px-4 py-2 rounded-2xl bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Live Sync Active
+                </div>
+            </header>
+
+            <!-- TAB 1: ANALYTICS & CALENDAR -->
+            <div id="usec-analytics" class="space-y-6">
+                
+                <!-- Overall Performance Cards & Quick Filter Header Container -->
+                <div class="glass-card p-6 sm:p-8 rounded-3xl space-y-6 relative z-30">
+                    <div class="flex flex-col lg:flex-row justify-between items-center gap-4 bg-slate-900/80 p-5 rounded-2xl border border-slate-800 shadow-inner relative">
+                        <div>
+                            <h2 class="text-sm font-bold text-cyan-300 uppercase tracking-wider">Overall Performance Overview</h2>
+                            <p class="text-[11px] text-slate-400 mt-0.5">View and filter performance statistics.</p>
+                        </div>
+
+                        <!-- Quick Filter & Custom Date Dropdown Box -->
+                        <div class="relative">
+                            <button onclick="toggleQuickFilterDropdown()" class="bg-slate-800 hover:bg-slate-700 text-xs px-4 py-2.5 rounded-xl font-bold text-slate-200 border border-slate-700 flex items-center gap-3 transition-all">
+                                <span>📅 <span id="selectedFilterLabel">Today</span></span>
+                                <span class="text-slate-400">▾</span>
+                            </button>
+
+                            <!-- Dropdown Box containing Quick options + Custom Date Inputs -->
+                            <div id="quickFilterDropdown" class="hidden absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-3 z-50 backdrop-blur-xl space-y-2">
+                                <button onclick="selectQuickFilter('today', 'Today')" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-cyan-400 rounded-xl transition-all">Today</button>
+                                <button onclick="selectQuickFilter('yesterday', 'Yesterday')" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-cyan-400 rounded-xl transition-all">Yesterday</button>
+                                <button onclick="selectQuickFilter('last7', 'Last 7 Days')" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-cyan-400 rounded-xl transition-all">Last 7 Days</button>
+                                <button onclick="selectQuickFilter('last30', 'Last 30 Days')" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-cyan-400 rounded-xl transition-all">Last 30 Days</button>
+                                
+                                <div class="border-t border-slate-800 my-1 pt-2">
+                                    <p class="text-[10px] text-slate-400 font-bold uppercase px-1 mb-1">Custom Range</p>
+                                    <div class="flex gap-2">
+                                        <div class="flex-1">
+                                            <span class="text-[9px] text-slate-400">From</span>
+                                            <input type="date" id="startDate" onchange="filterByCustomDate()" class="w-full bg-slate-950 text-[11px] text-slate-200 p-1.5 rounded-lg border border-slate-700">
+                                        </div>
+                                        <div class="flex-1">
+                                            <span class="text-[9px] text-slate-400">To</span>
+                                            <input type="date" id="endDate" onchange="filterByCustomDate()" class="w-full bg-slate-950 text-[11px] text-slate-200 p-1.5 rounded-lg border border-slate-700">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="border-t border-slate-800 my-1"></div>
+                                <button onclick="selectQuickFilter('reset', 'All Time')" class="w-full text-left px-3 py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all">Reset Filter</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stat Cards Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 pt-2">
+                        <div class="p-6 rounded-3xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-between shadow-xl">
+                            <div>
+                                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Clicks</p>
+                                <h4 id="statTotalClicks" class="text-3xl font-extrabold text-cyan-400 mt-2">0</h4>
+                            </div>
+                            <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-xl">🖱️</div>
+                        </div>
+
+                        <div class="p-6 rounded-3xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-between shadow-xl">
+                            <div>
+                                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Installs</p>
+                                <h4 id="statTotalInstalls" class="text-3xl font-extrabold text-amber-400 mt-2">0</h4>
+                            </div>
+                            <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xl">📦</div>
+                        </div>
+
+                        <div class="p-6 rounded-3xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-between shadow-xl">
+                            <div>
+                                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Earnings</p>
+                                <h4 id="statTotalEarnings" class="text-3xl font-extrabold text-emerald-400 mt-2">₹0.00</h4>
+                            </div>
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-xl">💰</div>
+                        </div>
+
+                        <div class="p-6 rounded-3xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-between shadow-xl">
+                            <div>
+                                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Average CR (%)</p>
+                                <h4 id="statAvgCr" class="text-3xl font-extrabold text-indigo-400 mt-2">0%</h4>
+                            </div>
+                            <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-xl">📈</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendar & Detailed Breakdown Table -->
+                <div class="glass-card p-6 sm:p-8 rounded-3xl space-y-6">
+                    <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider border-b border-slate-800 pb-4">Detailed Daily Breakdown</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-slate-400 uppercase text-[11px] tracking-wider">
+                                    <th class="p-4">Date</th>
+                                    <th class="p-4">Link Name</th>
+                                    <th class="p-4 text-center">Clicks</th>
+                                    <th class="p-4 text-center">Installs</th>
+                                    <th class="p-4 text-center">CR (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="calendarTableBody" class="divide-y divide-slate-800/50"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- TAB 2: MY ACTIVE LINKS -->
+            <div id="usec-links" class="hidden glass-card p-6 sm:p-8 rounded-3xl space-y-6">
+                <h2 class="text-lg font-bold text-cyan-300 border-b border-slate-800 pb-4">Assigned Campaign Links</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400 uppercase text-[11px] tracking-wider">
+                                <th class="p-4">Name</th>
+                                <th class="p-4">Short URL</th>
+                                <th class="p-4 text-center">Clicks</th>
+                                <th class="p-4 text-center">Installs</th>
+                                <th class="p-4 text-center">CR (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userLinksTableBody" class="divide-y divide-slate-800/50"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 3: EARNINGS & PAYOUTS -->
+            <div id="usec-earnings" class="hidden glass-card p-8 rounded-3xl space-y-6">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                    <h2 class="text-xl font-bold text-emerald-400">💰 My Earnings & Payout Summary</h2>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+                        <p class="text-xs font-bold text-slate-400 uppercase">Rate Per Install</p>
+                        <h3 id="earningsRateDisplay" class="text-3xl font-extrabold text-cyan-400">₹0.00</h3>
+                    </div>
+                    <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+                        <p class="text-xs font-bold text-slate-400 uppercase">Total Installs</p>
+                        <h3 id="earningsInstallsDisplay" class="text-3xl font-extrabold text-amber-400">0</h3>
+                    </div>
+                    <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+                        <p class="text-xs font-bold text-slate-400 uppercase">Total Income</p>
+                        <h3 id="earningsTotalDisplay" class="text-3xl font-extrabold text-emerald-400">₹0.00</h3>
+                    </div>
+                </div>
+
+                <div class="p-6 rounded-2xl bg-slate-900/50 border border-slate-800/80 text-sm text-slate-400">
+                    <p>💡 Note: Your earnings are calculated dynamically based on your total successful installs multiplied by your assigned rate per install.</p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        let rawUserLinks = [];
+        let userRatePerInstall = 0;
+
+        window.onload = async function() {
+            await loadUserProfile();
+            await loadUserLinks();
+            
+            // Default load par 'Today' select karega
+            selectQuickFilter('today', 'Today');
+            
+            // Auto refresh every 30 seconds
+            setInterval(loadUserLinks, 30000);
+        };
+
+        async function loadUserProfile() {
+            try {
+                const meRes = await fetch('/api/me');
+                if (meRes.ok) {
+                    const user = await meRes.json();
+                    document.getElementById('welcomeText').textContent = `Welcome, ${user.username || 'User'}`;
+                    const mobEl = document.getElementById('mobileWelcomeText');
+                    if(mobEl) mobEl.textContent = user.username || 'User';
+                    userRatePerInstall = Number(user.rate_per_install || 0);
+                    
+                    // Update earnings tab custom cards if needed
+                    document.getElementById('earningsRateDisplay').textContent = `₹${userRatePerInstall.toFixed(2)}`;
+                }
+            } catch (err) {
+                console.error("Error loading user profile:", err);
+            }
+        }
+
+        function switchUserTab(tab) {
+            ['analytics', 'links', 'earnings'].forEach(t => {
+                const sec = document.getElementById(`usec-${t}`);
+                const btn = document.getElementById(`utab-${t}`);
+                if (sec) sec.classList.add('hidden');
+                if (btn) {
+                    btn.className = "w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-sm transition-all duration-300 text-slate-400 hover:text-white hover:bg-slate-800/50";
+                }
+            });
+            const activeSec = document.getElementById(`usec-${tab}`);
+            const activeBtn = document.getElementById(`utab-${tab}`);
+            if (activeSec) activeSec.classList.remove('hidden');
+            if (activeBtn) {
+                activeBtn.className = "w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-sm transition-all duration-300 bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-lg shadow-cyan-600/30";
+            }
+        }
+
+        async function loadUserLinks() {
+            try {
+                const res = await fetch('/api/user/links');
+                const data = await res.json();
+                
+                if (data && Array.isArray(data.links)) {
+                    rawUserLinks = data.links;
+                } else if (Array.isArray(data)) {
+                    rawUserLinks = data;
+                } else {
+                    rawUserLinks = [];
+                }
+
+                filterByDateRange();
+                renderLinksTable(rawUserLinks);
+            } catch (err) {
+                console.error("Error loading user links:", err);
+                rawUserLinks = [];
+                renderLinksTable([]);
+            }
+        }
+
+        function updateStatsDisplay(links) {
+            let totalClicks = 0;
+            let totalInstalls = 0;
+            let totalEarnings = 0;
+
+            links.forEach(link => {
+                totalClicks += Number(link.clicks || 0);
+                const installs = Number(link.installs || 0);
+                totalInstalls += installs;
+                
+                const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
+                totalEarnings += installs * linkRate;
+            });
+
+            const overallCr = totalClicks > 0 ? ((totalInstalls / totalClicks) * 100).toFixed(1) : 0;
+
+            document.getElementById('statTotalClicks').textContent = totalClicks.toLocaleString();
+            document.getElementById('statTotalInstalls').textContent = totalInstalls.toLocaleString();
+            document.getElementById('statTotalEarnings').textContent = `₹${totalEarnings.toFixed(2)}`;
+            document.getElementById('statAvgCr').textContent = `${overallCr}%`;
+
+            // Update Earnings Tab details as well
+            document.getElementById('earningsInstallsDisplay').textContent = totalInstalls.toLocaleString();
+            document.getElementById('earningsTotalDisplay').textContent = `₹${totalEarnings.toFixed(2)}`;
+        }
+
+        function renderLinksTable(links) {
+            const tbody = document.getElementById('userLinksTableBody');
+            tbody.innerHTML = '';
+            const baseUrl = window.location.origin;
+
+            if (!links || links.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-8 text-slate-500">No active links assigned yet.</td></tr>`;
+                return;
+            }
+
+            links.forEach(link => {
+                const shortUrl = `${baseUrl}/s/${link.short_code}`;
+                const cr = link.clicks > 0 ? ((link.installs / link.clicks) * 100).toFixed(1) : 0;
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-800/35 transition-colors">
+                        <td class="p-4 font-bold text-slate-200">${link.link_name || 'Link'}</td>
+                        <td class="p-4">
+                            <div class="flex items-center gap-2">
+                                <a href="${shortUrl}" target="_blank" class="text-cyan-400 hover:underline text-xs font-mono bg-cyan-950/40 px-3 py-1.5 rounded-lg border border-cyan-800/40 truncate max-w-[180px] inline-block">${shortUrl}</a>
+                                <button onclick="copyToClipboard('${shortUrl}', this)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg border border-slate-700 font-semibold transition-all">📋 Copy</button>
+                            </div>
+                        </td>
+                        <td class="p-4 text-center text-emerald-400 font-bold">${link.clicks || 0}</td>
+                        <td class="p-4 text-center text-amber-400 font-bold">${link.installs || 0}</td>
+                        <td class="p-4 text-center text-indigo-300 font-bold">${cr}%</td>
+                    </tr>`;
+            });
+        }
+
+        function toggleQuickFilterDropdown() {
+            const dropdown = document.getElementById('quickFilterDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        function selectQuickFilter(type, label) {
+            document.getElementById('selectedFilterLabel').textContent = label;
+            document.getElementById('quickFilterDropdown').classList.add('hidden');
+
+            if (type === 'reset') {
+                document.getElementById('startDate').value = '';
+                document.getElementById('endDate').value = '';
+                filterByDateRange();
+                return;
+            }
+
+            const today = new Date();
+            let startStr = '';
+            let endStr = today.toISOString().split('T')[0];
+
+            if (type === 'today') {
+                startStr = endStr;
+            } else if (type === 'yesterday') {
+                const yest = new Date();
+                yest.setDate(today.getDate() - 1);
+                startStr = yest.toISOString().split('T')[0];
+                endStr = startStr;
+            } else if (type === 'last7') {
+                const d = new Date();
+                d.setDate(today.getDate() - 7);
+                startStr = d.toISOString().split('T')[0];
+            } else if (type === 'last30') {
+                const d = new Date();
+                d.setDate(today.getDate() - 30);
+                startStr = d.toISOString().split('T')[0];
+            }
+
+            document.getElementById('startDate').value = startStr;
+            document.getElementById('endDate').value = endStr;
+            filterByDateRange();
+        }
+
+        function filterByCustomDate() {
+            document.getElementById('selectedFilterLabel').textContent = 'Custom Range';
+            filterByDateRange();
+        }
+
+        function filterByDateRange() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            const filtered = rawUserLinks.filter(l => {
+                if (!l.created_at) return true;
+                const linkDate = l.created_at.split('T')[0];
+                if (startDate && endDate) return linkDate >= startDate && linkDate <= endDate;
+                if (startDate) return linkDate >= startDate;
+                if (endDate) return linkDate <= endDate;
+                return true;
+            });
+
+            updateStatsDisplay(filtered);
+
+            const tbody2 = document.getElementById('calendarTableBody');
+            tbody2.innerHTML = '';
+            
+            if (!filtered || filtered.length === 0) {
+                tbody2.innerHTML = `<tr><td colspan="5" class="text-center p-8 text-slate-500">No data available for selected date range.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(link => {
+                const cr = link.clicks > 0 ? ((link.installs / link.clicks) * 100).toFixed(1) : 0;
+                const dateOnly = link.created_at ? link.created_at.split('T')[0] : 'N/A';
+
+                tbody2.innerHTML += `
+                    <tr class="hover:bg-slate-800/35 transition-colors">
+                        <td class="p-4 text-xs text-slate-400 font-medium">${dateOnly}</td>
+                        <td class="p-4 font-bold text-slate-200">${link.link_name || 'Link'}</td>
+                        <td class="p-4 text-center text-emerald-400 font-bold">${link.clicks || 0}</td>
+                        <td class="p-4 text-center text-amber-400 font-bold">${link.installs || 0}</td>
+                        <td class="p-4 text-center font-black text-cyan-400">${cr}%</td>
+                    </tr>`;
+            });
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('quickFilterDropdown');
+            const button = dropdown?.previousElementSibling;
+            if (dropdown && !dropdown.classList.contains('hidden') && button && !button.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        function copyToClipboard(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✅ Copied!';
+                setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+            });
+        }
+
+        async function logout() { 
+            await fetch('/api/logout', { method: 'POST' }); 
+            window.location.href = '/login'; 
+        }
+    </script>
+</body>
+</html>

@@ -1,418 +1,358 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Control Center - Nemonics</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .glass-card {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-        }
-        .glow-effect:hover {
-            box-shadow: 0 0 25px rgba(99, 102, 241, 0.3);
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Control Center - Nemonics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+    </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen p-6 relative overflow-x-hidden">
-    
-    <div class="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
-    <div class="absolute top-1/3 right-1/4 w-96 h-96 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none"></div>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-3 text-xs">
+    
+    <!-- Width ko max-w-4xl kar diya hai taaki zyada faila hua na lage -->
+    <div class="max-w-4xl mx-auto space-y-3">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-center glass-card p-3 rounded-xl">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center font-extrabold text-sm shadow-md">N</div>
+                <div>
+                    <h1 class="text-base font-extrabold bg-gradient-to-r from-indigo-400 via-sky-300 to-cyan-400 bg-clip-text text-transparent">Admin Hub</h1>
+                    <p class="text-[10px] text-slate-400">Enterprise tracking & analytics.</p>
+                </div>
+            </div>
+            <button onclick="logout()" class="bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white px-3 py-1.5 rounded-lg font-semibold text-[11px] transition-all">Logout</button>
+        </header>
 
-    <div class="max-w-6xl mx-auto space-y-4 relative z-10">
-        
-        <!-- Header -->
-        <header class="flex justify-between items-center glass-card p-6 rounded-3xl">
-            <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center font-extrabold text-xl shadow-lg shadow-indigo-500/30">N</div>
-                <div>
-                    <h1 class="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-indigo-400 via-sky-300 to-cyan-400 bg-clip-text text-transparent">Admin Control Hub</h1>
-                    <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Enterprise tracking, user credentials, and conversion analytics.</p>
-                </div>
-            </div>
-            <button onclick="logout()" class="bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white px-5 py-2.5 rounded-2xl font-semibold transition-all duration-300 text-sm">Logout</button>
-        </header>
+        <!-- Navigation Tabs -->
+        <div class="flex gap-1.5 p-1 glass-card rounded-xl">
+            <button onclick="switchTab('assign')" id="tab-assign" class="flex-1 py-2 px-2 rounded-lg font-bold text-[11px] transition-all bg-indigo-600 text-white shadow">🔗 Assign</button>
+            <button onclick="switchTab('users')" id="tab-users" class="flex-1 py-2 px-2 rounded-lg font-bold text-[11px] transition-all text-slate-400 hover:text-white">👥 Users & Payouts</button>
+            <button onclick="switchTab('analytics')" id="tab-analytics" class="flex-1 py-2 px-2 rounded-lg font-bold text-[11px] transition-all text-slate-400 hover:text-white">📊 Analytics</button>
+        </div>
 
-        <!-- Navigation Tabs -->
-        <div class="flex gap-2 p-1.5 glass-card rounded-2xl">
-            <button onclick="switchTab('assign')" id="tab-assign" class="flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-600/30">🔗 Assign Links</button>
-            <button onclick="switchTab('users')" id="tab-users" class="flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 text-slate-400 hover:text-white hover:bg-slate-800/50">👥 User Management & Payouts</button>
-            <button onclick="switchTab('analytics')" id="tab-analytics" class="flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 text-slate-400 hover:text-white hover:bg-slate-800/50">📊 System Analytics & CR</button>
-        </div>
+        <!-- TAB 1: Assign Links & Create User -->
+        <div id="section-assign" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="glass-card p-4 rounded-xl space-y-2.5">
+                <div class="flex items-center gap-2 border-b border-slate-800/80 pb-2">
+                    <span class="text-lg">🔗</span>
+                    <h2 class="text-sm font-bold text-indigo-300">Assign Link to User</h2>
+                </div>
+                <form id="assignLinksForm" onsubmit="assignLink(event)" class="space-y-2">
+                    <div>
+                        <label class="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Select User</label>
+                        <select id="userSelect" required class="w-full bg-slate-900 border border-slate-700/85 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500"></select>
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Campaign Name</label>
+                        <input type="text" id="linkName" placeholder="e.g. Promo" class="w-full bg-slate-900 border border-slate-700/85 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Target URL</label>
+                        <input type="url" id="targetUrl" placeholder="https://example.com" required class="w-full bg-slate-900 border border-slate-700/85 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Rate Per Install (₹)</label>
+                        <input type="number" id="linkRate" placeholder="0.00" step="0.01" class="w-full bg-slate-900 border border-slate-700/85 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-lg shadow text-[11px] transition-all">Assign Link</button>
+                </form>
+            </div>
 
-        <!-- TAB 1: Assign Links & Create User -->
-        <div id="section-assign" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="glass-card p-8 rounded-3xl space-y-5 glow-effect transition-all duration-300">
-                <div class="flex items-center gap-3 border-b border-slate-800 pb-4">
-                    <span class="text-2xl">🔗</span>
-                    <h2 class="text-xl font-bold text-indigo-300">Assign Link to User</h2>
-                </div>
-                <form id="assignLinksForm" onsubmit="assignLink(event)" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Select User Account</label>
-                        <select id="userSelect" required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-2xl px-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 transition-all"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Campaign / Link Name</label>
-                        <input type="text" id="linkName" placeholder="e.g. Summer Promo" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-2xl px-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 transition-all">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Target Destination URL</label>
-                        <input type="url" id="targetUrl" placeholder="https://example.com" required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-2xl px-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 transition-all">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Rate Per Install (₹)</label>
-                        <input type="number" id="linkRate" placeholder="0.00" step="0.01" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-2xl px-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 transition-all">
-                    </div>
-                    <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-500 hover:to-sky-500 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-indigo-600/30 transition-all duration-300">Assign Link Now</button>
-                </form>
-            </div>
+            <div class="glass-card p-4 rounded-xl space-y-2.5">
+                <div class="flex items-center gap-2 border-b border-slate-800/80 pb-2">
+                    <span class="text-lg">👤</span>
+                    <h2 class="text-sm font-bold text-cyan-300">Create Sub-User</h2>
+                </div>
+                <form id="createUserForm" onsubmit="createUser(event)" class="space-y-2">
+                    <div>
+                        <label class="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Username</label>
+                        <input type="text" id="newUsername" placeholder="Username" required class="w-full bg-slate-900 border border-slate-700/85 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Password</label>
+                        <input type="password" id="newPassword" placeholder="Password" required class="w-full bg-slate-900 border border-slate-700/85 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 rounded-lg shadow text-[11px] transition-all">Create Account</button>
+                </form>
+            </div>
+        </div>
 
-            <div class="glass-card p-8 rounded-3xl space-y-5 glow-effect transition-all duration-300">
-                <div class="flex items-center gap-3 border-b border-slate-800 pb-4">
-                    <span class="text-2xl">👤</span>
-                    <h2 class="text-xl font-bold text-cyan-300">Create Sub-User</h2>
-                </div>
-                <form id="createUserForm" onsubmit="createUser(event)" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Username</label>
-                        <input type="text" id="newUsername" placeholder="Enter username" required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-2xl px-4 py-3 text-slate-200 focus:outline-none focus:border-cyan-500 transition-all">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Secure Password</label>
-                        <input type="password" id="newPassword" placeholder="Enter password" required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-2xl px-4 py-3 text-slate-200 focus:outline-none focus:border-cyan-500 transition-all">
-                    </div>
-                    <button type="submit" class="w-full bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-cyan-600/30 transition-all duration-300">Create Account</button>
-                </form>
-            </div>
-        </div>
+        <!-- TAB 2: User Management & Payouts -->
+        <div id="section-users" class="hidden glass-card p-4 rounded-xl space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-200">Users Registry & Payouts</h2>
+                    <p class="text-[10px] text-slate-400">Monitor performance & clear payouts.</p>
+                </div>
+                <button onclick="loadUsers()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] px-2.5 py-1 rounded-lg">🔄 Refresh</button>
+            </div>
+            <div id="usersListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-2.5"></div>
+        </div>
 
-        <!-- TAB 2: User Management & Payouts -->
-        <div id="section-users" class="hidden glass-card p-8 rounded-3xl space-y-6">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-4">
-                <div>
-                    <h2 class="text-xl font-bold text-slate-200">Registered Users Registry, Earnings & Payouts</h2>
-                    <p class="text-xs text-slate-400">Monitor performance and manually clear custom payout amounts.</p>
-                </div>
-                <button onclick="loadUsers()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs px-4 py-2 rounded-xl transition-all font-semibold">🔄 Refresh Users</button>
-            </div>
-            <div id="usersListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-        </div>
+        <!-- TAB 3: System Analytics & CR Control -->
+        <div id="section-analytics" class="hidden glass-card p-4 rounded-xl space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-200">System Analytics</h2>
+                    <p class="text-[10px] text-slate-400">Manage real-time metrics and rates.</p>
+                </div>
+                <button onclick="loadAllLinks()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] px-2.5 py-1 rounded-lg">🔄 Refresh</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-[11px] border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-slate-400 uppercase text-[9px] tracking-wider">
+                            <th class="p-2.5">User</th>
+                            <th class="p-2.5">Link / URL</th>
+                            <th class="p-2.5 text-center">Clicks</th>
+                            <th class="p-2.5 text-center">Installs</th>
+                            <th class="p-2.5 text-center">Rate</th>
+                            <th class="p-2.5 text-center">CR</th>
+                            <th class="p-2.5 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminLinksTableBody" class="divide-y divide-slate-800/40"></tbody>
+                </table>
+            </div>
+        </div>
 
-        <!-- TAB 3: System Analytics & CR Control -->
-        <div id="section-analytics" class="hidden glass-card p-8 rounded-3xl space-y-4">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-4">
-                <div>
-                    <h2 class="text-xl font-bold text-slate-200">System-Wide Links & Analytics</h2>
-                    <p class="text-xs text-slate-400">Manage real-time metrics, link rates, and conversion ratios.</p>
-                </div>
-                <button onclick="loadAllLinks()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs px-4 py-2 rounded-xl transition-all font-semibold">🔄 Refresh Data</button>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm border-collapse">
-                    <thead>
-                        <tr class="border-b border-slate-800 text-slate-400 uppercase text-[11px] tracking-wider">
-                            <th class="p-4">Assigned User</th>
-                            <th class="p-4">Link / Target URL</th>
-                            <th class="p-4 text-center">Clicks</th>
-                            <th class="p-4 text-center">Installs</th>
-                            <th class="p-4 text-center">Rate (₹)</th>
-                            <th class="p-4 text-center">CR (%)</th>
-                            <th class="p-4 text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="adminLinksTableBody" class="divide-y divide-slate-800/50"></tbody>
-                </table>
-            </div>
-        </div>
+    </div>
 
-    </div>
+    <script>
+        window.onload = () => { loadUsers(); loadAllLinks(); };
 
-    <script>
-        window.onload = () => { loadUsers(); loadAllLinks(); };
+        function switchTab(tab) {
+            ['assign', 'users', 'analytics'].forEach(t => {
+                document.getElementById(`section-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).className = "flex-1 py-2 px-2 rounded-lg font-bold text-[11px] transition-all text-slate-400 hover:text-white";
+            });
+            document.getElementById(`section-${tab}`).classList.remove('hidden');
+            let activeClass = "flex-1 py-2 px-2 rounded-lg font-bold text-[11px] transition-all text-white shadow ";
+            if(tab === 'assign') activeClass += "bg-indigo-600";
+            else if(tab === 'users') activeClass += "bg-cyan-600";
+            else activeClass += "bg-teal-600";
+            document.getElementById(`tab-${tab}`).className = activeClass;
+        }
 
-        function switchTab(tab) {
-            ['assign', 'users', 'analytics'].forEach(t => {
-                document.getElementById(`section-${t}`).classList.add('hidden');
-                document.getElementById(`tab-${t}`).className = "flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 text-slate-400 hover:text-white hover:bg-slate-800/50";
-            });
-            document.getElementById(`section-${tab}`).classList.remove('hidden');
-            document.getElementById(`tab-${tab}`).className = "flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-600/30";
-        }
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/admin/users');
+                const users = await res.json();
+                const select = document.getElementById('userSelect');
+                select.innerHTML = '<option value="">-- Choose User --</option>';
+                const container = document.getElementById('usersListContainer');
+                container.innerHTML = '';
 
-        async function loadUsers() {
-            try {
-                const res = await fetch('/api/admin/users');
-                const users = await res.json();
-                const select = document.getElementById('userSelect');
-                select.innerHTML = '<option value="">-- Choose User Account --</option>';
-                const container = document.getElementById('usersListContainer');
-                container.innerHTML = '';
+                if (!users || users.length === 0) {
+                    container.innerHTML = `<p class="text-slate-500 text-[11px]">No users found.</p>`;
+                    return;
+                }
 
-                if (!users || users.length === 0) {
-                    container.innerHTML = `<p class="text-slate-500 text-sm">No users found.</p>`;
-                    return;
-                }
+                users.forEach(u => {
+                    if(u.role !== 'admin') {
+                        select.innerHTML += `<option value="${u.id}">${u.username} (ID: ${u.id})</option>`;
+                        
+                        const installs = Number(u.total_installs || 0);
+                        const rate = Number(u.rate_per_install || 0);
+                        const totalEarnings = (installs * rate).toFixed(2);
 
-                users.forEach(u => {
-                    if(u.role !== 'admin') {
-                        select.innerHTML += `<option value="${u.id}">${u.username} (ID: ${u.id})</option>`;
-                        
-                        const installs = Number(u.total_installs || 0);
-                        const rate = Number(u.rate_per_install || 0);
-                        const totalEarnings = (installs * rate).toFixed(2);
+                        container.innerHTML += `
+                            <div class="p-3 bg-slate-900/80 border border-slate-800 rounded-lg flex flex-col gap-2">
+                                <div class="flex justify-between items-center">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-7 h-7 rounded bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center font-bold text-indigo-400 text-[10px]">👤</div>
+                                        <div>
+                                            <span class="font-bold text-slate-200 block text-[11px]">${u.username}</span>
+                                            <span class="text-[9px] text-slate-400">ID: ${u.id}</span>
+                                        </div>
+                                    </div>
+                                    <span class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] rounded-full font-semibold">Active</span>
+                                </div>
 
-                        container.innerHTML += `
-                            <div class="p-5 bg-slate-900/75 border border-slate-800 rounded-2xl flex flex-col gap-4 shadow-xl">
-                                <div class="flex justify-between items-center">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center font-bold text-indigo-400">👤</div>
-                                        <div>
-                                            <span class="font-bold text-slate-200 block">${u.username}</span>
-                                            <span class="text-[11px] text-slate-400">ID: ${u.id} • Sub-User</span>
-                                        </div>
-                                    </div>
-                                    <span class="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-full font-semibold">Active</span>
-                                </div>
+                                <div class="grid grid-cols-2 gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800/80">
+                                    <div>
+                                        <span class="text-[8px] uppercase font-bold text-slate-400 block">Installs</span>
+                                        <span class="text-amber-400 font-extrabold text-xs">${installs.toLocaleString()}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-[8px] uppercase font-bold text-slate-400 block">Earnings</span>
+                                        <span class="text-emerald-400 font-extrabold text-xs">₹${Number(totalEarnings).toLocaleString()}</span>
+                                    </div>
+                                </div>
 
-                                <!-- Earnings & Stats Row -->
-                                <div class="grid grid-cols-2 gap-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
-                                    <div>
-                                        <span class="text-[10px] uppercase font-bold text-slate-400 block">Total Installs</span>
-                                        <span class="text-amber-400 font-extrabold text-base">${installs.toLocaleString()}</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-[10px] uppercase font-bold text-slate-400 block">Pending Payout</span>
-                                        <span class="text-emerald-400 font-extrabold text-base">₹${Number(totalEarnings).toLocaleString()}</span>
-                                    </div>
-                                </div>
+                                <div class="flex items-center justify-between border-t border-slate-800/80 pt-2">
+                                    <span class="text-[10px] font-bold text-slate-400">Rate (₹):</span>
+                                    <div class="flex items-center gap-1.5">
+                                        <input type="number" id="rate_${u.id}" value="${u.rate_per_install || 0}" step="0.01" class="w-14 bg-slate-950 border border-slate-700 text-center rounded p-1 text-slate-200 text-[11px] font-bold">
+                                        <button onclick="updateUserRate(${u.id})" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-2 py-1 rounded font-bold">Set</button>
+                                    </div>
+                                </div>
 
-                                <div class="flex items-center justify-between border-t border-slate-800 pt-3">
-                                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Rate / Install (₹):</span>
-                                    <div class="flex items-center gap-2">
-                                        <input type="number" id="rate_${u.id}" value="${u.rate_per_install || 0}" step="0.01" class="w-20 bg-slate-950 border border-slate-700 text-center rounded-xl p-2 text-slate-200 text-xs font-bold focus:outline-none focus:border-indigo-500">
-                                        <button onclick="updateUserRate(${u.id})" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded-xl font-bold transition-all shadow-md">Set Rate</button>
-                                    </div>
-                                </div>
+                                <div class="flex items-center justify-between border-t border-slate-800/80 pt-2 gap-1.5">
+                                    <input type="number" id="paid_amount_${u.id}" value="${totalEarnings}" step="0.01" placeholder="Amt" class="w-24 bg-slate-950 border border-emerald-500/40 text-center rounded p-1 text-emerald-400 text-[11px] font-bold">
+                                    <button onclick="processCustomPayment(${u.id}, '${u.username}')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] py-1.5 rounded font-bold flex items-center justify-center gap-1">
+                                        <span>💸</span> Pay & Clear
+                                    </button>
+                                </div>
+                            </div>`;
+                    }
+                });
+            } catch (err) {
+                console.error("Error loading users:", err);
+            }
+        }
 
-                                <!-- Manual Paid Amount Input & Button -->
-                                <div class="flex items-center justify-between border-t border-slate-800 pt-3 gap-2">
-                                    <input type="number" id="paid_amount_${u.id}" value="${totalEarnings}" step="0.01" placeholder="Enter amount" class="w-32 bg-slate-950 border border-emerald-500/40 text-center rounded-xl p-2.5 text-emerald-400 text-xs font-bold focus:outline-none focus:border-emerald-500">
-                                    <button onclick="processCustomPayment(${u.id}, '${u.username}')" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
-                                        <span>💸</span> Update & Pay
-                                    </button>
-                                </div>
-                            </div>`;
-                    }
-                });
-            } catch (err) {
-                console.error("Error loading users:", err);
-            }
-        }
+        async function updateUserRate(userId) {
+            const rate = document.getElementById(`rate_${userId}`).value;
+            try {
+                const res = await fetch('/api/admin/set-rate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, rate })
+                });
+                const data = await res.json();
+                if(res.ok && data.success) { alert('⚡ Rate updated!'); loadUsers(); }
+                else { alert('❌ Failed'); }
+            } catch (err) { console.error(err); }
+        }
 
-        async function updateUserRate(userId) {
-            const rate = document.getElementById(`rate_${userId}`).value;
-            try {
-                const res = await fetch('/api/admin/set-rate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId, rate })
-                });
-                const data = await res.json();
-                if(res.ok && data.success) {
-                    alert('⚡ Payout rate updated successfully!');
-                    loadUsers();
-                } else {
-                    alert('❌ Failed to update rate');
-                }
-            } catch (err) {
-                console.error("Error updating rate:", err);
-            }
-        }
+        async function processCustomPayment(userId, username) {
+            const amountPaid = parseFloat(document.getElementById(`paid_amount_${userId}`).value);
+            if (isNaN(amountPaid) || amountPaid < 0) { alert('Enter valid amount'); return; }
+            if (!confirm(`Pay ₹${amountPaid} to ${username}?`)) return;
 
-        async function processCustomPayment(userId, username) {
-            const paidAmountInput = document.getElementById(`paid_amount_${userId}`).value;
-            const amountPaid = parseFloat(paidAmountInput);
+            try {
+                const res = await fetch(`/api/admin/pay/${userId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount_paid: amountPaid })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) { alert('🎉 Paid successfully!'); loadUsers(); }
+                else { alert('❌ Failed'); }
+            } catch (err) { console.error(err); }
+        }
 
-            if (isNaN(amountPaid) || amountPaid < 0) {
-                alert('❌ Kripya valid amount enter karein.');
-                return;
-            }
+        async function loadAllLinks() {
+            try {
+                const res = await fetch('/api/admin/all-links');
+                const links = await res.json();
+                const tbody = document.getElementById('adminLinksTableBody');
+                tbody.innerHTML = '';
 
-            if (!confirm(`Kya aap "${username}" ko ₹${amountPaid} ka payment update karna chahte hain? Yeh unka current installs balance zero (0) kar dega.`)) return;
+                if (!links || links.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-slate-500">No links found.</td></tr>`;
+                    return;
+                }
 
-            try {
-                const res = await fetch(`/api/admin/pay/${userId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ amount_paid: amountPaid })
-                });
-                const data = await res.json();
-                
-                if (res.ok && data.success) {
-                    alert('🎉 Payment successfully recorded and balance updated!');
-                    loadUsers();
-                } else {
-                    alert('❌ Failed: ' + (data.error || 'Unknown error'));
-                }
-            } catch (err) {
-                console.error("Error processing payment:", err);
-                alert('Network error while processing payment.');
-            }
-        }
+                links.forEach(link => {
+                    const cr = link.clicks > 0 ? ((link.installs / link.clicks) * 100).toFixed(1) : 0;
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-800/30 border-b border-slate-800/40">
+                            <td class="p-2 font-bold text-indigo-300">${link.username || 'Unassigned'}</td>
+                            <td class="p-2">
+                                <div class="font-bold text-slate-200">${link.link_name || 'Link'}</div>
+                                <a href="${link.target_url}" target="_blank" class="text-[10px] text-sky-400 hover:underline truncate block max-w-[120px] font-mono">${link.target_url}</a>
+                            </td>
+                            <td class="p-2 text-center"><input type="number" id="clicks_${link.id}" value="${link.clicks}" class="w-12 bg-slate-900 border border-slate-700 text-center rounded p-1 text-slate-200 font-bold text-[11px]"></td>
+                            <td class="p-2 text-center"><input type="number" id="installs_${link.id}" value="${link.installs}" class="w-12 bg-slate-900 border border-slate-700 text-center rounded p-1 text-slate-200 font-bold text-[11px]"></td>
+                            <td class="p-2 text-center"><input type="number" id="link_rate_${link.id}" value="${link.rate_per_install || 0}" step="0.01" class="w-12 bg-slate-900 border border-slate-700 text-center rounded p-1 text-emerald-400 font-bold text-[11px]"></td>
+                            <td class="p-2 text-center font-black text-cyan-400">${cr}%</td>
+                            <td class="p-2 text-center">
+                                <div class="flex items-center justify-center gap-1">
+                                    <button onclick="updateStats(${link.id})" class="bg-indigo-600 text-white text-[10px] px-2 py-1 rounded font-bold">Save</button>
+                                    <button onclick="updateLinkRate(${link.id})" class="bg-emerald-600 text-white text-[10px] px-2 py-1 rounded font-bold">Rate</button>
+                                    <button onclick="deleteLink(${link.id})" class="bg-rose-500/20 text-rose-400 text-[10px] px-1.5 py-1 rounded font-bold">🗑️</button>
+                                </div>
+                            </td>
+                        </tr>`;
+                });
+            } catch (err) { console.error(err); }
+        }
 
-        async function loadAllLinks() {
-            try {
-                const res = await fetch('/api/admin/all-links');
-                const links = await res.json();
-                const tbody = document.getElementById('adminLinksTableBody');
-                tbody.innerHTML = '';
+        async function updateStats(linkId) {
+            const clicks = document.getElementById(`clicks_${linkId}`).value;
+            const installs = document.getElementById(`installs_${linkId}`).value;
+            try {
+                const res = await fetch('/api/admin/adjust-stats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ link_id: linkId, clicks, installs })
+                });
+                const data = await res.json();
+                if(res.ok && data.success) { alert('⚡ Stats updated!'); loadAllLinks(); }
+            } catch (err) { console.error(err); }
+        }
 
-                if (!links || links.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-500">No links assigned in the system yet.</td></tr>`;
-                    return;
-                }
+        async function updateLinkRate(linkId) {
+            const rate = document.getElementById(`link_rate_${linkId}`).value;
+            try {
+                const res = await fetch('/api/admin/set-link-rate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ link_id: linkId, rate: rate })
+                });
+                const data = await res.json();
+                if(res.ok && data.success) { alert('⚡ Rate updated!'); loadAllLinks(); }
+            } catch (err) { console.error(err); }
+        }
 
-                links.forEach(link => {
-                    const cr = link.clicks > 0 ? ((link.installs / link.clicks) * 100).toFixed(1) : 0;
-                    tbody.innerHTML += `
-                        <tr class="hover:bg-slate-800/35 transition-colors border-b border-slate-800/50">
-                            <td class="p-4 font-bold text-indigo-300">${link.username || 'Unassigned'}</td>
-                            <td class="p-4">
-                                <div class="font-bold text-slate-200">${link.link_name || 'Link'}</div>
-                                <a href="${link.target_url}" target="_blank" class="text-xs text-sky-400 hover:underline truncate block max-w-xs font-mono">${link.target_url}</a>
-                            </td>
-                            <td class="p-4 text-center"><input type="number" id="clicks_${link.id}" value="${link.clicks}" class="w-20 bg-slate-900 border border-slate-700 text-center rounded-xl p-2 text-slate-200 focus:outline-none focus:border-indigo-500 font-bold"></td>
-                            <td class="p-4 text-center"><input type="number" id="installs_${link.id}" value="${link.installs}" class="w-20 bg-slate-900 border border-slate-700 text-center rounded-xl p-2 text-slate-200 focus:outline-none focus:border-indigo-500 font-bold"></td>
-                            <td class="p-4 text-center"><input type="number" id="link_rate_${link.id}" value="${link.rate_per_install || 0}" step="0.01" class="w-20 bg-slate-900 border border-slate-700 text-center rounded-xl p-2 text-emerald-400 focus:outline-none focus:border-indigo-500 font-bold"></td>
-                            <td class="p-4 text-center font-black text-cyan-400 text-base">${cr}%</td>
-                            <td class="p-4 text-center">
-                                <div class="flex items-center justify-center gap-1.5 flex-wrap">
-                                    <button onclick="updateStats(${link.id})" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1.5 rounded-xl transition-all shadow-md font-bold">Stats</button>
-                                    <button onclick="updateLinkRate(${link.id})" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-2.5 py-1.5 rounded-xl transition-all shadow-md font-bold">Rate</button>
-                                    <button onclick="deleteLink(${link.id})" class="bg-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white text-xs px-2.5 py-1.5 rounded-xl transition-all shadow-md font-bold">🗑️</button>
-                                </div>
-                            </td>
-                        </tr>`;
-                });
-            } catch (err) {
-                console.error("Error loading all links:", err);
-            }
-        }
+        async function deleteLink(linkId) {
+            if (!confirm("Delete link?")) return;
+            try {
+                const res = await fetch('/api/admin/delete-link', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ link_id: linkId })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) { alert('🗑️ Deleted'); loadAllLinks(); }
+            } catch (err) { console.error(err); }
+        }
 
-        async function updateStats(linkId) {
-            const clicks = document.getElementById(`clicks_${linkId}`).value;
-            const installs = document.getElementById(`installs_${linkId}`).value;
-            try {
-                const res = await fetch('/api/admin/adjust-stats', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ link_id: linkId, clicks, installs })
-                });
-                const data = await res.json();
-                if(res.ok && data.success) { alert('⚡ Stats updated successfully!'); loadAllLinks(); }
-                else { alert('❌ Failed to update stats'); }
-            } catch (err) {
-                console.error("Error updating stats:", err);
-            }
-        }
+        async function assignLink(e) {
+            e.preventDefault();
+            const user_id = document.getElementById('userSelect').value;
+            const name = document.getElementById('linkName').value || 'Direct Link';
+            const url = document.getElementById('targetUrl').value;
+            const rate = document.getElementById('linkRate').value;
+            try {
+                const res = await fetch('/api/admin/assign-links', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id, items: [{ name, url, rate }] })
+                });
+                const data = await res.json();
+                if(res.ok && data.success) { alert('🎉 Assigned!'); document.getElementById('assignLinksForm').reset(); loadAllLinks(); }
+            } catch (err) { console.error(err); }
+        }
 
-        async function updateLinkRate(linkId) {
-            const rate = document.getElementById(`link_rate_${linkId}`).value;
-            try {
-                const res = await fetch('/api/admin/set-link-rate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ link_id: linkId, rate: rate })
-                });
-                const data = await res.json();
-                if(res.ok && data.success) {
-                    alert('⚡ Link rate updated successfully!');
-                    loadAllLinks();
-                } else {
-                    alert('❌ Failed to update link rate');
-                }
-            } catch (err) {
-                console.error("Error updating link rate:", err);
-            }
-        }
+        async function createUser(e) {
+            e.preventDefault();
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newPassword').value;
+            try {
+                const res = await fetch('/api/admin/create-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if(res.ok && data.success) { alert('👤 Created!'); document.getElementById('createUserForm').reset(); loadUsers(); }
+            } catch (err) { console.error(err); }
+        }
 
-        async function deleteLink(linkId) {
-            if (!confirm("Kya aap sach mein is link ko delete karna chahte hain?")) return;
-            
-            try {
-                const res = await fetch('/api/admin/delete-link', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ link_id: linkId })
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    alert('🗑️ Link deleted successfully!');
-                    loadAllLinks();
-                } else {
-                    alert('❌ Error: ' + (data.error || 'Failed to delete'));
-                }
-            } catch (err) {
-                console.error('Failed to delete link:', err);
-                alert('Something went wrong!');
-            }
-        }
-
-        async function assignLink(e) {
-            e.preventDefault();
-            const user_id = document.getElementById('userSelect').value;
-            const name = document.getElementById('linkName').value || 'Direct Link';
-            const url = document.getElementById('targetUrl').value;
-            const rate = document.getElementById('linkRate').value;
-            try {
-                const res = await fetch('/api/admin/assign-links', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id, items: [{ name, url, rate }] })
-                });
-                const data = await res.json();
-                if(res.ok && data.success) { 
-                    alert('🎉 Link Assigned Successfully with Rate!'); 
-                    document.getElementById('assignLinksForm').reset(); 
-                    loadAllLinks(); 
-                } else { 
-                    alert('❌ Failed to assign'); 
-                }
-            } catch (err) {
-                console.error("Error assigning link:", err);
-            }
-        }
-
-        async function createUser(e) {
-            e.preventDefault();
-            const username = document.getElementById('newUsername').value;
-            const password = document.getElementById('newPassword').value;
-            try {
-                const res = await fetch('/api/admin/create-user', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await res.json();
-                if(res.ok && data.success) { 
-                    alert('👤 User Created Successfully!'); 
-                    document.getElementById('createUserForm').reset(); 
-                    loadUsers(); 
-                } else { 
-                    alert('❌ Failed to create user'); 
-                }
-            } catch (err) {
-                console.error("Error creating user:", err);
-            }
-        }
-
-        async function logout() { await fetch('/api/logout', { method: 'POST' }); window.location.href = '/login'; }
-    </script>
+        async function logout() { await fetch('/api/logout', { method: 'POST' }); window.location.href = '/login'; }
+    </script>
 </body>
 </html>

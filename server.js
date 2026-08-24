@@ -117,46 +117,6 @@ app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
     }
 });
 
-// --- NEW: Deduct Balance API (Minus Amount from User Wallet/Installs) ---
-app.post('/api/admin/deduct-balance/:userId', isAdmin, async (req, res) => {
-    const userId = req.params.userId;
-    const { deduction_amount } = req.body;
-    try {
-        // User ka current installs aur rate fetch karein
-        const { data: user, error: fetchError } = await supabase
-            .from('users')
-            .select('total_installs, rate_per_install')
-            .eq('id', userId)
-            .single();
-
-        if (fetchError || !user) {
-            return res.status(404).json({ success: false, error: 'User nahi mila' });
-        }
-
-        const rate = Number(user.rate_per_install || 0);
-        if (rate <= 0) {
-            return res.status(400).json({ success: false, error: 'User ka rate zero (0) hai, deduction nahi ho sakta.' });
-        }
-
-        // Amount ko rate se divide karke check karein ki kitne installs kam karne hain
-        const installsToSubtract = Math.ceil(Number(deduction_amount) / rate);
-        const newInstalls = Math.max(0, Number(user.total_installs || 0) - installsToSubtract);
-
-        // Supabase update query
-        const { error: updateError } = await supabase
-            .from('users')
-            .update({ total_installs: newInstalls })
-            .eq('id', userId);
-
-        if (updateError) return res.status(500).json({ error: updateError.message });
-
-        res.json({ success: true, message: 'Balance successfully deduct ho gaya' });
-    } catch (err) {
-        console.error("Deduction error:", err);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
 app.post('/api/admin/set-link-rate', isAdmin, async (req, res) => {
     const { link_id, rate } = req.body;
     try {
@@ -208,11 +168,30 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
     try {
         const { data: links, error: linkError } = await supabase.from('links').select('*').order('created_at', { ascending: false });
         if (linkError) return res.status(500).json({ error: linkError.message });
+        
         const { data: users, error: userError } = await supabase.from('users').select('id, username');
         if (userError) return res.status(500).json({ error: userError.message });
+        
         const userMap = {};
         if (users) users.forEach(u => { userMap[u.id] = u.username; });
-        const enrichedLinks = links.map(link => ({ ...link, username: userMap[link.user_id] || 'Unassigned' }));
+
+        // Fetch today's stats to attach today's clicks/installs
+        const todayStr = new Date().toISOString().split('T')[0];
+        const { data: dailyStats } = await supabase.from('daily_stats').select('*').eq('stat_date', todayStr);
+        const dailyMap = {};
+        if (dailyStats) {
+            dailyStats.forEach(d => {
+                dailyMap[d.link_id] = { clicks: d.clicks || 0, installs: d.installs || 0 };
+            });
+        }
+
+        const enrichedLinks = links.map(link => ({ 
+            ...link, 
+            username: userMap[link.user_id] || 'Unassigned',
+            today_clicks: dailyMap[link.id] ? dailyMap[link.id].clicks : 0,
+            today_installs: dailyMap[link.id] ? dailyMap[link.id].installs : 0
+        }));
+
         res.json(enrichedLinks);
     } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
@@ -242,13 +221,41 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
     try {
         const { data: links, error } = await supabase.from('links').select('*').eq('user_id', userId).order('created_at', { ascending: false });
         if (error) return res.status(500).json({ error: error.message });
+        
+        const todayStr = new Date().toISOString().split('T')[0];
+        const { data: dailyStats } = await supabase.from('daily_stats').select('*').eq('stat_date', todayStr).eq('user_id', userId);
+        const dailyMap = {};
+        if (dailyStats) {
+            dailyStats.forEach(d => {
+                dailyMap[d.link_id] = { clicks: d.clicks || 0, installs: d.installs || 0 };
+            });
+        }
+
         let totalClicks = 0, totalInstalls = 0, totalEarnings = 0;
-        links.forEach(l => {
+        let todayClicks = 0, todayInstalls = 0;
+
+        const enrichedLinks = links.map(l => {
+            const tClicks = dailyMap[l.id] ? dailyMap[l.id].clicks : 0;
+            const tInstalls = dailyMap[l.id] ? dailyMap[l.id].installs : 0;
+
             totalClicks += (l.clicks || 0);
             totalInstalls += (l.installs || 0);
             totalEarnings += ((l.installs || 0) * (l.rate_per_install || 0));
+
+            todayClicks += tClicks;
+            todayInstalls += tInstalls;
+
+            return {
+                ...l,
+                today_clicks: tClicks,
+                today_installs: tInstalls
+            };
         });
-        res.json({ links, stats: { totalClicks, totalInstalls, totalEarnings } });
+
+        res.json({ 
+            links: enrichedLinks, 
+            stats: { totalClicks, totalInstalls, totalEarnings, todayClicks, todayInstalls } 
+        });
     } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 

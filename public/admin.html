@@ -179,8 +179,8 @@
                             <tr class="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider">
                                 <th class="p-3">User</th>
                                 <th class="p-3">Link / URL</th>
-                                <th class="p-3 text-center">Clicks</th>
-                                <th class="p-3 text-center">Installs</th>
+                                <th class="p-3 text-center">Clicks (Today / Total)</th>
+                                <th class="p-3 text-center">Installs (Today / Total)</th>
                                 <th class="p-3 text-center">Rate</th>
                                 <th class="p-3 text-center">CR</th>
                                 <th class="p-3 text-center">Action</th>
@@ -342,7 +342,7 @@
             } catch (err) { console.error("Error loading users:", err); }
         }
 
-        async function loadAllLinks() {
+       async function loadAllLinks() {
             try {
                 const res = await fetch('/api/admin/all-links');
                 const links = await res.json();
@@ -365,8 +365,14 @@
                                         <div class="font-bold text-slate-800">${link.link_name || 'Link'}</div>
                                         <a href="${link.target_url}" target="_blank" class="text-[10px] text-cyan-600 hover:underline truncate block max-w-[140px] font-mono">${link.target_url}</a>
                                     </td>
-                                    <td class="p-3 text-center"><input type="number" id="clicks_${link.id}" value="${link.clicks}" class="w-14 bg-slate-50 border border-slate-200 text-center rounded-lg p-1 text-slate-800 font-bold text-xs"></td>
-                                    <td class="p-3 text-center"><input type="number" id="installs_${link.id}" value="${link.installs}" class="w-14 bg-slate-50 border border-slate-200 text-center rounded-lg p-1 text-slate-800 font-bold text-xs"></td>
+                                    <td class="p-3 text-center">
+                                        <span class="text-[10px] text-slate-400 block">Today: ${link.today_clicks || 0}</span>
+                                        <input type="number" id="clicks_${link.id}" value="${link.clicks}" class="w-14 bg-slate-50 border border-slate-200 text-center rounded-lg p-1 text-slate-800 font-bold text-xs mt-1">
+                                    </td>
+                                    <td class="p-3 text-center">
+                                        <span class="text-[10px] text-slate-400 block">Today: ${link.today_installs || 0}</span>
+                                        <input type="number" id="installs_${link.id}" value="${link.installs}" class="w-14 bg-slate-50 border border-slate-200 text-center rounded-lg p-1 text-slate-800 font-bold text-xs mt-1">
+                                    </td>
                                     <td class="p-3 text-center"><input type="number" id="link_rate_${link.id}" value="${link.rate_per_install || 0}" step="0.01" class="w-14 bg-slate-50 border border-slate-200 text-center rounded-lg p-1 text-emerald-600 font-bold text-xs"></td>
                                     <td class="p-3 text-center font-extrabold text-cyan-600">${cr}%</td>
                                     <td class="p-3 text-center">

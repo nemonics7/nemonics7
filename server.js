@@ -277,36 +277,36 @@ app.get('/s/:shortCode', async (req, res) => {
 
         const targetUrl = link.target_url.trim();
 
-        const { data: existingClick } = await supabase
-            .from('link_clicks')
-            .select('id')
+        // 1. Log click in link_clicks
+        await supabase.from('link_clicks').insert([{ link_id: link.id, ip_address: clientIp }]);
+        
+        // 2. Update total clicks in links table
+        await supabase.from('links').update({ clicks: (link.clicks || 0) + 1 }).eq('id', link.id);
+
+        // 3. Update or Insert Today's Daily Stats safely
+        const todayStr = new Date().toISOString().split('T')[0];
+        const { data: existingDaily } = await supabase
+            .from('daily_stats')
+            .select('*')
             .eq('link_id', link.id)
-            .eq('ip_address', clientIp)
-            .single();
+            .eq('stat_date', todayStr)
+            .maybeSingle();
 
-        if (!existingClick) {
-            await supabase.from('link_clicks').insert([{ link_id: link.id, ip_address: clientIp }]);
-            await supabase.from('links').update({ clicks: (link.clicks || 0) + 1 }).eq('id', link.id);
-
-            const todayStr = new Date().toISOString().split('T')[0];
-            const { data: existingDaily } = await supabase
+        if (existingDaily) {
+            await supabase
                 .from('daily_stats')
-                .select('*')
-                .eq('link_id', link.id)
-                .eq('stat_date', todayStr)
-                .single();
-
-            if (existingDaily) {
-                await supabase.from('daily_stats').update({ clicks: existingDaily.clicks + 1 }).eq('id', existingDaily.id);
-            } else {
-                await supabase.from('daily_stats').insert([{
+                .update({ clicks: (existingDaily.clicks || 0) + 1 })
+                .eq('id', existingDaily.id);
+        } else {
+            await supabase
+                .from('daily_stats')
+                .insert([{
                     link_id: link.id,
                     user_id: link.user_id,
                     clicks: 1,
                     installs: 0,
                     stat_date: todayStr
-                 }]);
-            }
+                }]);
         }
 
         return res.redirect(targetUrl);

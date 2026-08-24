@@ -25,6 +25,11 @@ app.use(session({
     saveUninitialized: false
 }));
 
+// Helper function for IST Date (YYYY-MM-DD)
+function getTodayIST() {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+}
+
 // Authentication Middleware
 function isAuthenticated(req, res, next) {
     if (req.session.user) return next();
@@ -175,8 +180,8 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
         const userMap = {};
         if (users) users.forEach(u => { userMap[u.id] = u.username; });
 
-        // Fetch today's stats to attach today's clicks/installs
-        const todayStr = new Date().toISOString().split('T')[0];
+        // Fetch today's stats using IST date
+        const todayStr = getTodayIST();
         const { data: dailyStats } = await supabase.from('daily_stats').select('*').eq('stat_date', todayStr);
         const dailyMap = {};
         if (dailyStats) {
@@ -222,7 +227,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
         const { data: links, error } = await supabase.from('links').select('*').eq('user_id', userId).order('created_at', { ascending: false });
         if (error) return res.status(500).json({ error: error.message });
         
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getTodayIST();
         const { data: dailyStats } = await supabase.from('daily_stats').select('*').eq('stat_date', todayStr).eq('user_id', userId);
         const dailyMap = {};
         if (dailyStats) {
@@ -283,8 +288,8 @@ app.get('/s/:shortCode', async (req, res) => {
         // 2. Update total clicks in links table
         await supabase.from('links').update({ clicks: (link.clicks || 0) + 1 }).eq('id', link.id);
 
-        // 3. Update or Insert Today's Daily Stats safely
-        const todayStr = new Date().toISOString().split('T')[0];
+        // 3. Update or Insert Today's Daily Stats safely using IST date
+        const todayStr = getTodayIST();
         const { data: existingDaily } = await supabase
             .from('daily_stats')
             .select('*')

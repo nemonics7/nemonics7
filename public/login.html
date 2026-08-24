@@ -9,10 +9,9 @@
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .glass-card {
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(25px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.06);
         }
         .glow-button {
             box-shadow: 0 10px 30px rgba(99, 102, 241, 0.35);
@@ -24,8 +23,7 @@
 </head>
 <body class="bg-white text-slate-900 min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
 
-    <!-- Background Ambient Glow Effects -->
-   
+    <!-- Background Ambient Glow Effects Removed -->
 
     <div class="w-full max-w-md relative z-10">
         
@@ -34,10 +32,10 @@
             <div class="inline-flex w-16 h-16 rounded-3xl bg-gradient-to-tr from-indigo-600 via-sky-500 to-cyan-400 items-center justify-center font-extrabold text-2xl shadow-xl shadow-indigo-500/30 text-white tracking-wider">
                 N
             </div>
-            <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 via-sky-300 to-cyan-400 bg-clip-text text-transparent">
+            <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 via-sky-600 to-cyan-600 bg-clip-text text-transparent">
                 Nemonics
             </h1>
-            <p class="text-xs sm:text-sm text-slate-400 font-medium">
+            <p class="text-xs sm:text-sm text-slate-500 font-medium">
                 Sign in to access your tracking & conversion hub
             </p>
         </div>
@@ -45,24 +43,24 @@
         <!-- Login Card -->
         <div class="glass-card p-8 sm:p-10 rounded-3xl space-y-6">
             
-            <div id="errorMessage" class="hidden bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs p-3.5 rounded-2xl font-semibold text-center"></div>
+            <div id="errorMessage" class="hidden bg-rose-500/10 border border-rose-500/30 text-rose-600 text-xs p-3.5 rounded-2xl font-semibold text-center"></div>
 
             <form onsubmit="handleLogin(event)" class="space-y-5">
                 <div>
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Username</label>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-2">Username</label>
                     <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 text-sm">👤</span>
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 text-sm">👤</span>
                         <input type="text" id="username" placeholder="Enter your username" required 
-                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-2xl pl-11 pr-4 py-3.5 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25 transition-all text-sm font-medium">
+                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/25 transition-all text-sm font-medium">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Password</label>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-2">Password</label>
                     <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 text-sm">🔒</span>
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 text-sm">🔒</span>
                         <input type="password" id="password" placeholder="••••••••••••" required 
-                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-2xl pl-11 pr-4 py-3.5 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25 transition-all text-sm font-medium">
+                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/25 transition-all text-sm font-medium">
                     </div>
                 </div>
 
@@ -75,7 +73,7 @@
 
         <!-- Footer Info -->
         <div class="text-center mt-6">
-            <p class="text-xs text-slate-500 font-medium">Secured Enterprise Access • Nemonics System</p>
+            <p class="text-xs text-slate-400 font-medium">Secured Enterprise Access • Nemonics System</p>
         </div>
 
     </div>
@@ -102,7 +100,6 @@
                 const data = await res.json();
 
                 if (res.ok && data.success) {
-                    // Role ke hisab se sahi page par redirect karega
                     if (data.role === 'admin') {
                         window.location.href = '/admin';
                     } else {

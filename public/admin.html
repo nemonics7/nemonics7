@@ -15,7 +15,7 @@
         }
     </style>
 </head>
-<body class="bg-white text-slate-900 min-h-screen relative overflow-x-hidden">
+<body class="bg-white text-slate-900 min-h-screen relative overflow-x-hidden text-xs">
 
     <div class="flex min-h-screen relative z-10">
         
@@ -26,28 +26,31 @@
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-600 to-indigo-600 flex items-center justify-center font-extrabold text-lg text-white shadow-lg shadow-cyan-500/30">N</div>
                     <div>
-                        <h2 class="font-extrabold text-slate-900 tracking-wide">Nemonics</h2>
+                        <h2 class="font-extrabold text-slate-900 tracking-wide text-sm">Nemonics</h2>
                         <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Admin Panel</p>
                     </div>
                 </div>
 
                 <!-- Nav Links -->
                 <nav class="space-y-2">
-                    <button onclick="switchAdminTab('overview')" id="atab-overview" class="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-sm transition-all duration-300 bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-lg shadow-cyan-600/30">
+                    <button onclick="switchAdminTab('overview')" id="atab-overview" class="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-xs transition-all duration-300 bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-lg shadow-cyan-600/30">
                         <span>📊</span> Overview
                     </button>
-                    <button onclick="switchAdminTab('users')" id="atab-users" class="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-sm transition-all duration-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                        <span>👥</span> Manage Users
+                    <button onclick="switchAdminTab('users')" id="atab-users" class="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-xs transition-all duration-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                        <span>👥</span> Manage Users & Payouts
                     </button>
-                    <button onclick="switchAdminTab('links')" id="atab-links" class="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-sm transition-all duration-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                        <span>🔗</span> All Links
+                    <button onclick="switchAdminTab('links')" id="atab-links" class="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-xs transition-all duration-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                        <span>🔗</span> Link Analysis & CR
+                    </button>
+                    <button onclick="switchAdminTab('assign')" id="atab-assign" class="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-xs transition-all duration-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                        <span>➕</span> Assign Link & Create User
                     </button>
                 </nav>
             </div>
 
             <!-- Sidebar Footer / Logout -->
             <div class="pt-6 border-t border-slate-200">
-                <button onclick="logout()" class="w-full flex items-center justify-center gap-2 bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-500 hover:text-white py-3 rounded-2xl font-semibold transition-all duration-300 text-sm">
+                <button onclick="logout()" class="w-full flex items-center justify-center gap-2 bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-500 hover:text-white py-3 rounded-2xl font-semibold transition-all duration-300 text-xs">
                     🚪 Logout
                 </button>
             </div>
@@ -59,13 +62,14 @@
             <!-- Mobile Header -->
             <header class="flex md:hidden justify-between items-center glass-card p-4 rounded-2xl mb-6">
                 <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 text-white flex items-center justify-center font-bold text-sm">N</div>
-                    <h1 class="font-bold text-sm text-slate-900">Admin Panel</h1>
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs">N</div>
+                    <h1 class="font-bold text-xs text-slate-900">Admin Panel</h1>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5">
                     <button onclick="switchAdminTab('overview')" class="p-2 bg-slate-100 rounded-xl text-xs">📊</button>
                     <button onclick="switchAdminTab('users')" class="p-2 bg-slate-100 rounded-xl text-xs">👥</button>
                     <button onclick="switchAdminTab('links')" class="p-2 bg-slate-100 rounded-xl text-xs">🔗</button>
+                    <button onclick="switchAdminTab('assign')" class="p-2 bg-slate-100 rounded-xl text-xs">➕</button>
                     <button onclick="logout()" class="p-2 bg-rose-50 text-rose-600 rounded-xl text-xs">🚪</button>
                 </div>
             </header>
@@ -73,8 +77,8 @@
             <!-- Desktop Top Welcome Header -->
             <header class="hidden md:flex justify-between items-center glass-card p-6 rounded-3xl">
                 <div>
-                    <h1 class="text-2xl font-extrabold bg-gradient-to-r from-cyan-600 via-sky-600 to-indigo-600 bg-clip-text text-transparent">Admin Control Center</h1>
-                    <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Monitor system statistics, users, and platform performance.</p>
+                    <h1 class="text-xl font-extrabold bg-gradient-to-r from-cyan-600 via-sky-600 to-indigo-600 bg-clip-text text-transparent">Admin Control Center</h1>
+                    <p class="text-xs text-slate-500 mt-0.5">Monitor system statistics, user payouts, link conversions, and platform performance.</p>
                 </div>
                 <div class="px-4 py-2 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> System Online
@@ -83,125 +87,103 @@
 
             <!-- TAB 1: OVERVIEW -->
             <div id="asec-overview" class="space-y-6">
-                
-                <!-- Stat Cards Grid with Soft Glow & Matching Background Tints -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
-                    <!-- Total Users Card (Cyan Tint & Glow) -->
-                    <div class="p-6 rounded-3xl bg-cyan-50/40 border border-cyan-100 flex items-center justify-between shadow-lg shadow-cyan-500/5">
+                <!-- Stat Cards Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div class="p-5 rounded-3xl bg-cyan-50/40 border border-cyan-100 flex items-center justify-between shadow-lg shadow-cyan-500/5">
                         <div>
-                            <p class="text-[11px] font-bold uppercase tracking-wider text-cyan-800">Total Users</p>
-                            <h4 id="statTotalUsers" class="text-3xl font-extrabold text-cyan-600 mt-2">0</h4>
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-cyan-800">Total Users</p>
+                            <h4 id="statTotalUsers" class="text-2xl font-extrabold text-cyan-600 mt-1">0</h4>
                         </div>
-                        <div class="w-12 h-12 rounded-2xl bg-cyan-100 border border-cyan-200 flex items-center justify-center text-xl shadow-sm">👥</div>
+                        <div class="w-11 h-11 rounded-2xl bg-cyan-100 border border-cyan-200 flex items-center justify-center text-lg shadow-sm">👥</div>
                     </div>
 
-                    <!-- Active Links Card (Sky Tint & Glow) -->
-                    <div class="p-6 rounded-3xl bg-sky-50/40 border border-sky-100 flex items-center justify-between shadow-lg shadow-sky-500/5">
+                    <div class="p-5 rounded-3xl bg-sky-50/40 border border-sky-100 flex items-center justify-between shadow-lg shadow-sky-500/5">
                         <div>
-                            <p class="text-[11px] font-bold uppercase tracking-wider text-sky-800">Active Links</p>
-                            <h4 id="statActiveLinks" class="text-3xl font-extrabold text-sky-600 mt-2">0</h4>
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-sky-800">Active Links</p>
+                            <h4 id="statActiveLinks" class="text-2xl font-extrabold text-sky-600 mt-1">0</h4>
                         </div>
-                        <div class="w-12 h-12 rounded-2xl bg-sky-100 border border-sky-200 flex items-center justify-center text-xl shadow-sm">🔗</div>
+                        <div class="w-11 h-11 rounded-2xl bg-sky-100 border border-sky-200 flex items-center justify-center text-lg shadow-sm">🔗</div>
                     </div>
 
-                    <!-- Total Clicks Card (Indigo Tint & Glow) -->
-                    <div class="p-6 rounded-3xl bg-indigo-50/40 border border-indigo-100 flex items-center justify-between shadow-lg shadow-indigo-500/5">
+                    <div class="p-5 rounded-3xl bg-indigo-50/40 border border-indigo-100 flex items-center justify-between shadow-lg shadow-indigo-500/5">
                         <div>
-                            <p class="text-[11px] font-bold uppercase tracking-wider text-indigo-800">Total Clicks</p>
-                            <h4 id="statTotalClicks" class="text-3xl font-extrabold text-indigo-600 mt-2">0</h4>
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-800">Total Clicks</p>
+                            <h4 id="statTotalClicks" class="text-2xl font-extrabold text-indigo-600 mt-1">0</h4>
                         </div>
-                        <div class="w-12 h-12 rounded-2xl bg-indigo-100 border border-indigo-200 flex items-center justify-center text-xl shadow-sm">🖱️</div>
+                        <div class="w-11 h-11 rounded-2xl bg-indigo-100 border border-indigo-200 flex items-center justify-center text-lg shadow-sm">🖱️</div>
                     </div>
 
-                    <!-- Total Installs Card (Amber Tint & Glow) -->
-                    <div class="p-6 rounded-3xl bg-amber-50/40 border border-amber-100 flex items-center justify-between shadow-lg shadow-amber-500/5">
+                    <div class="p-5 rounded-3xl bg-amber-50/40 border border-amber-100 flex items-center justify-between shadow-lg shadow-amber-500/5">
                         <div>
-                            <p class="text-[11px] font-bold uppercase tracking-wider text-amber-800">Total Installs</p>
-                            <h4 id="statTotalInstalls" class="text-3xl font-extrabold text-amber-600 mt-2">0</h4>
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-amber-800">Total Installs</p>
+                            <h4 id="statTotalInstalls" class="text-2xl font-extrabold text-amber-600 mt-1">0</h4>
                         </div>
-                        <div class="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-200 flex items-center justify-center text-xl shadow-sm">📦</div>
+                        <div class="w-11 h-11 rounded-2xl bg-amber-100 border border-amber-200 flex items-center justify-center text-lg shadow-sm">📦</div>
                     </div>
 
-                    <!-- Total Earnings Card (Emerald Tint & Glow) -->
-                    <div class="p-6 rounded-3xl bg-emerald-50/40 border border-emerald-100 flex items-center justify-between shadow-lg shadow-emerald-500/5 sm:col-span-2 lg:col-span-1">
+                    <div class="p-5 rounded-3xl bg-emerald-50/40 border border-emerald-100 flex items-center justify-between shadow-lg shadow-emerald-500/5 sm:col-span-2 lg:col-span-1">
                         <div>
-                            <p class="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Total Earnings</p>
-                            <h4 id="statTotalEarnings" class="text-3xl font-extrabold text-emerald-600 mt-2">₹0.00</h4>
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-800">Total Earnings</p>
+                            <h4 id="statTotalEarnings" class="text-2xl font-extrabold text-emerald-600 mt-1">₹0.00</h4>
                         </div>
-                        <div class="w-12 h-12 rounded-2xl bg-emerald-100 border border-emerald-200 flex items-center justify-center text-xl shadow-sm">💰</div>
+                        <div class="w-11 h-11 rounded-2xl bg-emerald-100 border border-emerald-200 flex items-center justify-center text-lg shadow-sm">💰</div>
                     </div>
                 </div>
 
-                <!-- Quick Overview Section / Recent Activity Table -->
                 <div class="glass-card p-6 sm:p-8 rounded-3xl space-y-6">
-                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-4">Platform Overview Summary</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                            <h4 class="font-bold text-sm text-slate-700">Quick Actions</h4>
-                            <div class="flex flex-wrap gap-3">
-                                <button onclick="switchAdminTab('users')" class="bg-cyan-600 hover:bg-cyan-700 text-white text-xs px-4 py-2.5 rounded-xl font-bold transition-all shadow-md shadow-cyan-600/20">Manage Users</button>
-                                <button onclick="switchAdminTab('links')" class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl font-bold transition-all">View All Links</button>
-                            </div>
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-4">Quick Management Actions</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                            <h4 class="font-bold text-xs text-slate-700">Manage Payouts & Users</h4>
+                            <p class="text-[11px] text-slate-500">Update rates per install, check sub-user earnings, and process payouts.</p>
+                            <button onclick="switchAdminTab('users')" class="bg-cyan-600 hover:bg-cyan-700 text-white text-[11px] px-3.5 py-2 rounded-xl font-bold transition-all shadow-md">Go to Users</button>
                         </div>
-                        <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                            <h4 class="font-bold text-sm text-slate-700">System Status</h4>
-                            <p class="text-xs text-slate-500">All tracking servers, database connections, and short URL redirections are operating at peak efficiency.</p>
+                        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                            <h4 class="font-bold text-xs text-slate-700">Link Analysis & CR</h4>
+                            <p class="text-[11px] text-slate-500">Modify clicks, install numbers manually, and check conversion rates.</p>
+                            <button onclick="switchAdminTab('links')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] px-3.5 py-2 rounded-xl font-bold transition-all shadow-md">Go to Links</button>
+                        </div>
+                        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                            <h4 class="font-bold text-xs text-slate-700">Assign & Create</h4>
+                            <p class="text-[11px] text-slate-500">Assign new campaign destination links or create brand new sub-accounts.</p>
+                            <button onclick="switchAdminTab('assign')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-3.5 py-2 rounded-xl font-bold transition-all shadow-md">Go to Actions</button>
                         </div>
                     </div>
                 </div>
-
             </div>
 
-            <!-- TAB 2: MANAGE USERS -->
+            <!-- TAB 2: MANAGE USERS & PAYOUTS -->
             <div id="asec-users" class="hidden glass-card p-6 sm:p-8 rounded-3xl space-y-6">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
                     <div>
-                        <h2 class="text-lg font-bold text-cyan-600">Manage Registered Users</h2>
-                        <p class="text-xs text-slate-500 mt-0.5">Add new users, edit individual rates per install, or remove users.</p>
+                        <h2 class="text-base font-bold text-cyan-600">Users & Payouts Registry</h2>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Manage user commission rates, track earnings, and clear payouts.</p>
                     </div>
-                    <button onclick="openAddUserModal()" class="bg-gradient-to-r from-cyan-600 to-indigo-600 text-white text-xs px-5 py-3 rounded-xl font-bold transition-all shadow-lg shadow-cyan-600/25 flex items-center gap-2">
-                        <span>➕</span> Add New User
-                    </button>
+                    <button onclick="loadData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-semibold border border-slate-200 transition-all text-[11px]">🔄 Refresh</button>
                 </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-100 text-slate-400 uppercase text-[11px] tracking-wider">
-                                <th class="p-4">Username</th>
-                                <th class="p-4 text-center">Rate / Install (₹)</th>
-                                <th class="p-4 text-center">Active Links</th>
-                                <th class="p-4 text-center">Total Earnings</th>
-                                <th class="p-4 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminUsersTableBody" class="divide-y divide-slate-100"></tbody>
-                    </table>
-                </div>
+                <div id="usersListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </div>
 
-            <!-- TAB 3: ALL LINKS -->
+            <!-- TAB 3: LINK ANALYSIS & CR CONTROL -->
             <div id="asec-links" class="hidden glass-card p-6 sm:p-8 rounded-3xl space-y-6">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
                     <div>
-                        <h2 class="text-lg font-bold text-indigo-600">All Campaign Links</h2>
-                        <p class="text-xs text-slate-500 mt-0.5">Create and assign new links to users or monitor performance.</p>
+                        <h2 class="text-base font-bold text-indigo-600">Link Analysis & CR Control</h2>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Directly manage clicks, installs, and individual link rates.</p>
                     </div>
-                    <button onclick="openCreateLinkModal()" class="bg-gradient-to-r from-cyan-600 to-indigo-600 text-white text-xs px-5 py-3 rounded-xl font-bold transition-all shadow-lg shadow-cyan-600/25 flex items-center gap-2">
-                        <span>➕</span> Create New Link
-                    </button>
+                    <button onclick="loadData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-semibold border border-slate-200 transition-all text-[11px]">🔄 Refresh</button>
                 </div>
-
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm border-collapse">
+                    <table class="w-full text-left text-[11px] border-collapse">
                         <thead>
-                            <tr class="border-b border-slate-100 text-slate-400 uppercase text-[11px] tracking-wider">
-                                <th class="p-4">Link Name</th>
-                                <th class="p-4">Assigned User</th>
-                                <th class="p-4">Short URL</th>
-                                <th class="p-4 text-center">Clicks</th>
-                                <th class="p-4 text-center">Installs</th>
-                                <th class="p-4 text-right">Actions</th>
+                            <tr class="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider">
+                                <th class="p-3">User</th>
+                                <th class="p-3">Link / URL</th>
+                                <th class="p-3 text-center">Clicks</th>
+                                <th class="p-3 text-center">Installs</th>
+                                <th class="p-3 text-center">Rate</th>
+                                <th class="p-3 text-center">CR</th>
+                                <th class="p-3 text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody id="adminLinksTableBody" class="divide-y divide-slate-100"></tbody>
@@ -209,327 +191,281 @@
                 </div>
             </div>
 
+            <!-- TAB 4: ASSIGN LINK & CREATE USER -->
+            <div id="asec-assign" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Assign Link -->
+                <div class="glass-card p-6 rounded-3xl space-y-4">
+                    <h2 class="text-xs font-extrabold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
+                        <span>🔗</span> Assign Link to User
+                    </h2>
+                    <form id="assignLinksForm" onsubmit="assignLink(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Select User</label>
+                            <select id="userSelect" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-cyan-600"></select>
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Campaign Name</label>
+                            <input type="text" id="linkName" placeholder="e.g. Promo Campaign" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-cyan-600">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Target URL</label>
+                            <input type="url" id="targetUrl" placeholder="https://example.com" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-cyan-600">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Rate Per Install (₹)</label>
+                            <input type="number" id="linkRate" placeholder="0.00" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-cyan-600">
+                        </div>
+                        <button type="submit" class="w-full bg-gradient-to-r from-cyan-600 to-indigo-600 hover:opacity-95 text-white font-bold py-2.5 rounded-xl shadow-md shadow-cyan-600/20 transition-all">Assign Link</button>
+                    </form>
+                </div>
+
+                <!-- Create User -->
+                <div class="glass-card p-6 rounded-3xl space-y-4">
+                    <h2 class="text-xs font-extrabold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
+                        <span>👤</span> Create Sub-User Account
+                    </h2>
+                    <form id="createUserForm" onsubmit="createUser(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Username</label>
+                            <input type="text" id="newUsername" placeholder="Enter username" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-cyan-600">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Password</label>
+                            <input type="password" id="newPassword" placeholder="Enter password" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-cyan-600">
+                        </div>
+                        <button type="submit" class="w-full bg-gradient-to-r from-cyan-600 to-indigo-600 hover:opacity-95 text-white font-bold py-2.5 rounded-xl shadow-md shadow-cyan-600/20 transition-all mt-6">Create Account</button>
+                    </form>
+                </div>
+            </div>
+
         </main>
     </div>
 
-    <!-- MODAL: ADD / EDIT USER -->
-    <div id="userModal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 w-full max-w-md space-y-6 shadow-2xl">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-4">
-                <h3 id="userModalTitle" class="text-base font-bold text-slate-800">Add New User</h3>
-                <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
-            </div>
-            <form id="userForm" onsubmit="handleUserSubmit(event)" class="space-y-4">
-                <input type="hidden" id="modalUserId">
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Username</label>
-                    <input type="text" id="modalUsername" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-600">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Password</label>
-                    <input type="password" id="modalPassword" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-600" placeholder="Leave blank if editing">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Rate Per Install (₹)</label>
-                    <input type="number" step="0.01" id="modalRatePerInstall" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-600" placeholder="0.00">
-                </div>
-                <div class="flex justify-end gap-3 pt-2">
-                    <button type="button" onclick="closeUserModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-5 py-3 rounded-xl font-bold transition-all">Cancel</button>
-                    <button type="submit" class="bg-gradient-to-r from-cyan-600 to-indigo-600 hover:opacity-95 text-white text-xs px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-cyan-600/25">Save User</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL: CREATE / EDIT LINK -->
-    <div id="linkModal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 w-full max-w-md space-y-6 shadow-2xl">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-4">
-                <h3 id="linkModalTitle" class="text-base font-bold text-slate-800">Create New Link</h3>
-                <button onclick="closeLinkModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
-            </div>
-            <form id="linkForm" onsubmit="handleLinkSubmit(event)" class="space-y-4">
-                <input type="hidden" id="modalLinkId">
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Link Name</label>
-                    <input type="text" id="modalLinkName" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-600" placeholder="e.g. Campaign Alpha">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Assign User</label>
-                    <select id="modalLinkUserId" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-600">
-                        <option value="">Select User...</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Destination URL</label>
-                    <input type="url" id="modalDestinationUrl" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-600" placeholder="https://example.com/target">
-                </div>
-                <div class="flex justify-end gap-3 pt-2">
-                    <button type="button" onclick="closeLinkModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-5 py-3 rounded-xl font-bold transition-all">Cancel</button>
-                    <button type="submit" class="bg-gradient-to-r from-cyan-600 to-indigo-600 hover:opacity-95 text-white text-xs px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-cyan-600/25">Save Link</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <script>
-        let adminUsers = [];
-        let adminLinks = [];
+        window.onload = () => { loadData(); };
 
-        window.onload = async function() {
-            await loadAdminData();
-            setInterval(loadAdminData, 30000);
-        };
-
-        async function loadAdminData() {
-            try {
-                const [usersRes, linksRes] = await Promise.all([
-                    fetch('/api/admin/users'),
-                    fetch('/api/admin/links')
-                ]);
-
-                if (usersRes.ok) adminUsers = await usersRes.json();
-                if (linksRes.ok) adminLinks = await linksRes.json();
-
-                renderOverviewStats();
-                renderUsersTable();
-                renderLinksTable();
-                populateUserDropdown();
-            } catch (err) {
-                console.error("Error loading admin data:", err);
-            }
+        async function loadData() {
+            await loadUsers();
+            await loadAllLinks();
         }
 
         function switchAdminTab(tab) {
-            ['overview', 'users', 'links'].forEach(t => {
+            ['overview', 'users', 'links', 'assign'].forEach(t => {
                 const sec = document.getElementById(`asec-${t}`);
                 const btn = document.getElementById(`atab-${t}`);
                 if (sec) sec.classList.add('hidden');
                 if (btn) {
-                    btn.className = "w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-sm transition-all duration-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100";
+                    btn.className = "w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-xs transition-all duration-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100";
                 }
             });
             const activeSec = document.getElementById(`asec-${tab}`);
             const activeBtn = document.getElementById(`atab-${tab}`);
             if (activeSec) activeSec.classList.remove('hidden');
             if (activeBtn) {
-                activeBtn.className = "w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-sm transition-all duration-300 bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-lg shadow-cyan-600/30";
+                activeBtn.className = "w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-xs transition-all duration-300 bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-lg shadow-cyan-600/30";
             }
         }
 
-        function renderOverviewStats() {
-            const totalUsers = adminUsers.length;
-            const activeLinks = adminLinks.length;
-            let totalClicks = 0;
-            let totalInstalls = 0;
-            let totalEarnings = 0;
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/admin/users');
+                const users = await res.json();
+                const select = document.getElementById('userSelect');
+                if(select) select.innerHTML = '<option value="">-- Choose User --</option>';
+                const container = document.getElementById('usersListContainer');
+                if(container) container.innerHTML = '';
 
-            adminLinks.forEach(link => {
-                const clicks = Number(link.clicks || 0);
-                const installs = Number(link.installs || 0);
-                totalClicks += clicks;
-                totalInstalls += installs;
+                let totalUsersCount = 0;
+                let globalInstalls = 0;
+                let globalEarnings = 0;
 
-                // Find user rate if possible
-                const owner = adminUsers.find(u => u.id == link.user_id);
-                const rate = owner ? Number(owner.rate_per_install || 0) : 0;
-                totalEarnings += installs * rate;
-            });
+                if (users && users.length > 0) {
+                    users.forEach(u => {
+                        if(u.role !== 'admin') {
+                            totalUsersCount++;
+                            if(select) select.innerHTML += `<option value="${u.id}">${u.username} (ID: ${u.id})</option>`;
+                            
+                            const installs = Number(u.total_installs || 0);
+                            const rate = Number(u.rate_per_install || 0);
+                            const totalEarnings = (installs * rate);
+                            
+                            globalInstalls += installs;
+                            globalEarnings += totalEarnings;
 
-            document.getElementById('statTotalUsers').textContent = totalUsers.toLocaleString();
-            document.getElementById('statActiveLinks').textContent = activeLinks.toLocaleString();
-            document.getElementById('statTotalClicks').textContent = totalClicks.toLocaleString();
-            document.getElementById('statTotalInstalls').textContent = totalInstalls.toLocaleString();
-            document.getElementById('statTotalEarnings').textContent = `₹${totalEarnings.toFixed(2)}`;
+                            if(container) {
+                                container.innerHTML += `
+                                    <div class="p-4 bg-slate-50/70 border border-slate-200 rounded-2xl flex flex-col gap-3 shadow-sm">
+                                        <div class="flex justify-between items-center">
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-7 h-7 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-bold text-indigo-600 text-xs">👤</div>
+                                                <div>
+                                                    <span class="font-bold text-slate-800 block text-xs">${u.username}</span>
+                                                    <span class="text-[10px] text-slate-400">ID: ${u.id}</span>
+                                                </div>
+                                            </div>
+                                            <span class="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-600 text-[9px] rounded-full font-semibold">Active</span>
+                                        </div>
+
+                                        <div class="grid grid-cols-2 gap-2 bg-white p-3 rounded-xl border border-slate-200">
+                                            <div>
+                                                <span class="text-[9px] uppercase font-bold text-slate-400 block">Installs</span>
+                                                <span class="text-amber-600 font-extrabold text-xs">${installs.toLocaleString()}</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-[9px] uppercase font-bold text-slate-400 block">Earnings</span>
+                                                <span class="text-emerald-600 font-extrabold text-xs">₹${totalEarnings.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center justify-between border-t border-slate-200/60 pt-2">
+                                            <span class="text-[10px] font-bold text-slate-600">Rate (₹):</span>
+                                            <div class="flex items-center gap-1.5">
+                                                <input type="number" id="rate_${u.id}" value="${u.rate_per_install || 0}" step="0.01" class="w-16 bg-white border border-slate-200 text-center rounded-lg p-1 text-slate-800 text-xs font-bold focus:outline-none focus:border-cyan-600">
+                                                <button onclick="updateUserRate(${u.id})" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] px-2.5 py-1 rounded-lg font-bold shadow-sm">Set</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center justify-between border-t border-slate-200/60 pt-2 gap-2">
+                                            <input type="number" id="paid_amount_${u.id}" value="${totalEarnings.toFixed(2)}" step="0.01" class="w-24 bg-white border border-emerald-200 text-center rounded-lg p-1.5 text-emerald-600 text-xs font-bold focus:outline-none">
+                                            <button onclick="processCustomPayment(${u.id}, '${u.username}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] py-1.5 rounded-lg font-bold flex items-center justify-center gap-1 shadow-sm">
+                                                <span>💸</span> Pay & Clear
+                                            </button>
+                                        </div>
+                                    </div>`;
+                            }
+                        }
+                    });
+                }
+                document.getElementById('statTotalUsers').innerText = totalUsersCount;
+                document.getElementById('statTotalInstalls').innerText = globalInstalls.toLocaleString();
+                document.getElementById('statTotalEarnings').innerText = '₹' + globalEarnings.toFixed(2);
+            } catch (err) { console.error("Error loading users:", err); }
         }
 
-        function renderUsersTable() {
-            const tbody = document.getElementById('adminUsersTableBody');
-            tbody.innerHTML = '';
+        async function loadAllLinks() {
+            try {
+                const res = await fetch('/api/admin/all-links');
+                const links = await res.json();
+                const tbody = document.getElementById('adminLinksTableBody');
+                if(tbody) tbody.innerHTML = '';
 
-            if (!adminUsers || adminUsers.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-8 text-slate-400">No users found.</td></tr>`;
-                return;
-            }
+                let activeLinksCount = 0;
+                let totalClicksCount = 0;
 
-            adminUsers.forEach(user => {
-                const userLinks = adminLinks.filter(l => l.user_id == user.id);
-                let userInstalls = 0;
-                userLinks.forEach(l => userInstalls += Number(l.installs || 0));
-                const userEarnings = userInstalls * Number(user.rate_per_install || 0);
-
-                tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="p-4 font-bold text-slate-800">${user.username}</td>
-                        <td class="p-4 text-center font-bold text-cyan-600">₹${Number(user.rate_per_install || 0).toFixed(2)}</td>
-                        <td class="p-4 text-center font-semibold text-slate-600">${userLinks.length}</td>
-                        <td class="p-4 text-center font-extrabold text-emerald-600">₹${userEarnings.toFixed(2)}</td>
-                        <td class="p-4 text-right space-x-2">
-                            <button onclick="openEditUserModal(${user.id}, '${user.username}', ${user.rate_per_install || 0})" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg font-semibold transition-all">✏️ Edit</button>
-                            <button onclick="deleteUser(${user.id})" class="bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition-all">🗑️ Delete</button>
-                        </td>
-                    </tr>`;
-            });
+                if (links && links.length > 0) {
+                    activeLinksCount = links.length;
+                    links.forEach(link => {
+                        totalClicksCount += Number(link.clicks || 0);
+                        const cr = link.clicks > 0 ? ((link.installs / link.clicks) * 100).toFixed(1) : 0;
+                        if(tbody) {
+                            tbody.innerHTML += `
+                                <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
+                                    <td class="p-3 font-bold text-indigo-600">${link.username || 'Unassigned'}</td>
+                                    <td class="p-3">
+                                        <div class="font-bold text-slate-800">${link.link_name || 'Link'}</div>
+                                        <a href="${link.target_url}" target="_blank" class="text-[10px] text-cyan-600 hover:underline truncate block max-w-[140px] font-mono">${link.target_url}</a>
+                                    </td>
+                                    <td class="p-3 text-center"><input type="number" id="clicks_${link.id}" value="${link.clicks}" class="w-14 bg-slate-50 border border-slate-200 text-center rounded-lg p-1 text-slate-800 font-bold text-xs"></td>
+                                    <td class="p-3 text-center"><input type="number" id="installs_${link.id}" value="${link.installs}" class="w-14 bg-slate-50 border border-slate-200 text-center rounded-lg p-1 text-slate-800 font-bold text-xs"></td>
+                                    <td class="p-3 text-center"><input type="number" id="link_rate_${link.id}" value="${link.rate_per_install || 0}" step="0.01" class="w-14 bg-slate-50 border border-slate-200 text-center rounded-lg p-1 text-emerald-600 font-bold text-xs"></td>
+                                    <td class="p-3 text-center font-extrabold text-cyan-600">${cr}%</td>
+                                    <td class="p-3 text-center">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <button onclick="updateStats(${link.id})" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] px-2 py-1 rounded-lg font-bold shadow-sm">Save</button>
+                                            <button onclick="updateLinkRate(${link.id})" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] px-2 py-1 rounded-lg font-bold shadow-sm">Rate</button>
+                                            <button onclick="deleteLink(${link.id})" class="bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white text-[10px] px-2 py-1 rounded-lg font-bold">🗑️</button>
+                                        </div>
+                                    </td>
+                                </tr>`;
+                        }
+                    });
+                } else {
+                    if(tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-slate-400">No links found.</td></tr>`;
+                }
+                document.getElementById('statActiveLinks').innerText = activeLinksCount;
+                document.getElementById('statTotalClicks').innerText = totalClicksCount.toLocaleString();
+            } catch (err) { console.error(err); }
         }
 
-        function renderLinksTable() {
-            const tbody = document.getElementById('adminLinksTableBody');
-            tbody.innerHTML = '';
-            const baseUrl = window.location.origin;
-
-            if (!adminLinks || adminLinks.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-slate-400">No campaign links created yet.</td></tr>`;
-                return;
-            }
-
-            adminLinks.forEach(link => {
-                const owner = adminUsers.find(u => u.id == link.user_id);
-                const ownerName = owner ? owner.username : 'Unassigned';
-                const shortUrl = `${baseUrl}/s/${link.short_code}`;
-
-                tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="p-4 font-bold text-slate-800">${link.link_name || 'Link'}</td>
-                        <td class="p-4 font-medium text-slate-600">${ownerName}</td>
-                        <td class="p-4">
-                            <a href="${shortUrl}" target="_blank" class="text-cyan-600 hover:underline text-xs font-mono bg-cyan-50 px-3 py-1.5 rounded-lg border border-cyan-100 truncate max-w-[160px] inline-block">${shortUrl}</a>
-                        </td>
-                        <td class="p-4 text-center font-bold text-indigo-600">${link.clicks || 0}</td>
-                        <td class="p-4 text-center font-bold text-amber-600">${link.installs || 0}</td>
-                        <td class="p-4 text-right space-x-2">
-                            <button onclick="openEditLinkModal(${link.id}, '${link.link_name}', ${link.user_id}, '${link.destination_url}')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg font-semibold transition-all">✏️ Edit</button>
-                            <button onclick="deleteLink(${link.id})" class="bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition-all">🗑️ Delete</button>
-                        </td>
-                    </tr>`;
-            });
-        }
-
-        function populateUserDropdown() {
-            const select = document.getElementById('modalLinkUserId');
-            select.innerHTML = '<option value="">Select User...</option>';
-            adminUsers.forEach(u => {
-                select.innerHTML += `<option value="${u.id}">${u.username}</option>`;
-            });
-        }
-
-        // USER MODAL ACTIONS
-        function openAddUserModal() {
-            document.getElementById('userModalTitle').textContent = 'Add New User';
-            document.getElementById('modalUserId').value = '';
-            document.getElementById('modalUsername').value = '';
-            document.getElementById('modalPassword').value = '';
-            document.getElementById('modalPassword').required = true;
-            document.getElementById('modalRatePerInstall').value = '';
-            document.getElementById('userModal').classList.remove('hidden');
-        }
-
-        function openEditUserModal(id, username, rate) {
-            document.getElementById('userModalTitle').textContent = 'Edit User';
-            document.getElementById('modalUserId').value = id;
-            document.getElementById('modalUsername').value = username;
-            document.getElementById('modalPassword').value = '';
-            document.getElementById('modalPassword').required = false;
-            document.getElementById('modalRatePerInstall').value = rate;
-            document.getElementById('userModal').classList.remove('hidden');
-        }
-
-        function closeUserModal() {
-            document.getElementById('userModal').classList.add('hidden');
-        }
-
-        async function handleUserSubmit(e) {
-            e.preventDefault();
-            const id = document.getElementById('modalUserId').value;
-            const username = document.getElementById('modalUsername').value;
-            const password = document.getElementById('modalPassword').value;
-            const rate_per_install = parseFloat(document.getElementById('modalRatePerInstall').value);
-
-            const payload = { username, rate_per_install };
-            if (password) payload.password = password;
-
-            const url = id ? `/api/admin/users/${id}` : '/api/admin/users';
-            const method = id ? 'PUT' : 'POST';
-
-            const res = await fetch(url, {
-                method: method,
+        async function updateUserRate(userId) {
+            const rate = document.getElementById(`rate_${userId}`).value;
+            const res = await fetch('/api/admin/set-rate', {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ userId, rate })
             });
-
-            if (res.ok) {
-                closeUserModal();
-                loadAdminData();
-            } else {
-                alert('Failed to save user.');
-            }
+            if((await res.json()).success) { alert('⚡ Rate updated!'); loadData(); }
         }
 
-        async function deleteUser(id) {
-            if (!confirm('Are you sure you want to delete this user?')) return;
-            const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
-            if (res.ok) loadAdminData();
-            else alert('Failed to delete user.');
-        }
-
-        // LINK MODAL ACTIONS
-        function openCreateLinkModal() {
-            document.getElementById('linkModalTitle').textContent = 'Create New Link';
-            document.getElementById('modalLinkId').value = '';
-            document.getElementById('modalLinkName').value = '';
-            document.getElementById('modalLinkUserId').value = '';
-            document.getElementById('modalDestinationUrl').value = '';
-            document.getElementById('linkModal').classList.remove('hidden');
-        }
-
-        function openEditLinkModal(id, name, userId, destUrl) {
-            document.getElementById('linkModalTitle').textContent = 'Edit Link';
-            document.getElementById('modalLinkId').value = id;
-            document.getElementById('modalLinkName').value = name;
-            document.getElementById('modalLinkUserId').value = userId;
-            document.getElementById('modalDestinationUrl').value = destUrl;
-            document.getElementById('linkModal').classList.remove('hidden');
-        }
-
-        function closeLinkModal() {
-            document.getElementById('linkModal').classList.add('hidden');
-        }
-
-        async function handleLinkSubmit(e) {
-            e.preventDefault();
-            const id = document.getElementById('modalLinkId').value;
-            const link_name = document.getElementById('modalLinkName').value;
-            const user_id = document.getElementById('modalLinkUserId').value;
-            const destination_url = document.getElementById('modalDestinationUrl').value;
-
-            const payload = { link_name, user_id, destination_url };
-            const url = id ? `/api/admin/links/${id}` : '/api/admin/links';
-            const method = id ? 'PUT' : 'POST';
-
-            const res = await fetch(url, {
-                method: method,
+        async function processCustomPayment(userId, username) {
+            const amount_paid = parseFloat(document.getElementById(`paid_amount_${userId}`).value);
+            if (isNaN(amount_paid)) return alert('Enter valid amount');
+            const res = await fetch(`/api/admin/pay/${userId}`, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ amount_paid })
             });
-
-            if (res.ok) {
-                closeLinkModal();
-                loadAdminData();
-            } else {
-                alert('Failed to save link.');
-            }
+            if((await res.json()).success) { alert('🎉 Paid successfully!'); loadData(); }
         }
 
-        async function deleteLink(id) {
-            if (!confirm('Are you sure you want to delete this link?')) return;
-            const res = await fetch(`/api/admin/links/${id}`, { method: 'DELETE' });
-            if (res.ok) loadAdminData();
-            else alert('Failed to delete link.');
+        async function updateStats(linkId) {
+            const clicks = document.getElementById(`clicks_${linkId}`).value;
+            const installs = document.getElementById(`installs_${linkId}`).value;
+            const res = await fetch('/api/admin/adjust-stats', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ link_id: linkId, clicks, installs })
+            });
+            if((await res.json()).success) { alert('⚡ Stats updated!'); loadData(); }
         }
 
-        async function logout() { 
-            await fetch('/api/logout', { method: 'POST' }); 
-            window.location.href = '/login'; 
+        async function updateLinkRate(linkId) {
+            const rate = document.getElementById(`link_rate_${linkId}`).value;
+            const res = await fetch('/api/admin/set-link-rate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ link_id: linkId, rate })
+            });
+            if((await res.json()).success) { alert('⚡ Rate updated!'); loadData(); }
         }
+
+        async function deleteLink(linkId) {
+            if (!confirm("Delete link?")) return;
+            const res = await fetch('/api/admin/delete-link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ link_id: linkId })
+            });
+            if((await res.json()).success) { alert('🗑️ Deleted'); loadData(); }
+        }
+
+        async function assignLink(e) {
+            e.preventDefault();
+            const user_id = document.getElementById('userSelect').value;
+            const name = document.getElementById('linkName').value || 'Direct Link';
+            const url = document.getElementById('targetUrl').value;
+            const rate = document.getElementById('linkRate').value;
+            const res = await fetch('/api/admin/assign-links', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id, items: [{ name, url, rate }] })
+            });
+            if((await res.json()).success) { alert('🎉 Assigned!'); document.getElementById('assignLinksForm').reset(); loadData(); }
+        }
+
+        async function createUser(e) {
+            e.preventDefault();
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newPassword').value;
+            const res = await fetch('/api/admin/create-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            if((await res.json()).success) { alert('👤 Created!'); document.getElementById('createUserForm').reset(); loadData(); }
+        }
+
+        async function logout() { await fetch('/api/logout', { method: 'POST' }); window.location.href = '/login'; }
     </script>
 </body>
 </html>

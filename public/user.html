@@ -286,25 +286,44 @@
         }
 
         function getFilteredMetrics(link) {
-            let clicks = 0;
-            let installs = 0;
+    let clicks = 0;
+    let installs = 0;
 
-            if (currentFilterMode === 'today') {
-                clicks = Number(link.today_clicks || 0);
-                installs = Number(link.today_installs || 0);
-            } else if (currentFilterMode === 'yesterday') {
-                clicks = Number(link.yesterday_clicks || 0);
-                installs = Number(link.yesterday_installs || 0);
-            } else if (currentFilterMode === '7days') {
-                clicks = Number(link.last_7_days_clicks || link.clicks_7d || 0);
-                installs = Number(link.last_7_days_installs || link.installs_7d || 0);
-            } else { // 'all'
-                clicks = Number(link.clicks || 0);
-                installs = Number(link.installs || 0);
-            }
-            return { clicks, installs };
+    // Aaj ki date string nikalne ke liye (YYYY-MM-DD format mein)
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // Kal ki date nikalne ke liye
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+
+    if (currentFilterMode === 'today') {
+        // Agar backend mein direct 'today_clicks' hai ya date match karni hai
+        clicks = Number(link.today_clicks || link.clicks_today || 0);
+        installs = Number(link.today_installs || link.installs_today || 0);
+        
+        // Agar backend date-wise breakdown array ya object deta hai toh yahan handle hoga
+        if (link.date === todayStr) {
+            clicks = Number(link.clicks || 0);
+            installs = Number(link.installs || 0);
         }
-
+    } else if (currentFilterMode === 'yesterday') {
+        clicks = Number(link.yesterday_clicks || link.clicks_yesterday || 0);
+        installs = Number(link.yesterday_installs || link.installs_yesterday || 0);
+        
+        if (link.date === yesterdayStr) {
+            clicks = Number(link.clicks || 0);
+            installs = Number(link.installs || 0);
+        }
+    } else if (currentFilterMode === '7days') {
+        clicks = Number(link.last_7_days_clicks || link.clicks_7d || link.clicks || 0);
+        installs = Number(link.last_7_days_installs || link.installs_7d || link.installs || 0);
+    } else { // 'all'
+        clicks = Number(link.clicks || 0);
+        installs = Number(link.installs || 0);
+    }
+    return { clicks, installs };
+}
         function updateDashboardView() {
             let totalClicks = 0;
             let totalInstalls = 0;

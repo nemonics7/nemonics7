@@ -222,38 +222,91 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
 // --- USER API ROUTES ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
-    const { startDate, endDate } = req.query;
 
     try {
+        // 1. Get all links for the user
         const { data: links, error } = await supabase.from('links').select('*').eq('user_id', userId).order('created_at', { ascending: false });
         if (error) return res.status(500).json({ error: error.message });
         
-        // Fetch daily stats based on date range if provided
-        let dailyQuery = supabase.from('daily_stats').select('*').eq('user_id', userId);
-        if (startDate && endDate) {
-            dailyQuery = dailyQuery.gte('stat_date', startDate).lte('stat_date', endDate);
-        }
+        // 2. Fetch all daily stats for this user
+        const { data: dailyStats, error: dailyError } = await supabase.from('daily_stats').select('*').eq('user_id', userId);
+        if (dailyError) console.error("Error fetching daily stats:", dailyError);
 
-        const { data: dailyStats } = await dailyQuery;
-        const dailyMap = {};
+        // Date calculations (YYYY-MM-DD format)
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        const yesterdayDate = new Date();
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        // Maps to hold metrics for different filters
+        const statsMap = {};
+
         if (dailyStats) {
             dailyStats.forEach(d => {
-                if (!dailyMap[d.link_id]) {
-                    dailyMap[d.link_id] = { clicks: 0, installs: 0 };
+                const linkId = d.link_id;
+                if (!statsMap[linkId]) {
+                    statsMap[linkId] = {
+                        today_clicks: 0,
+                        today_installs: 0,
+                        yesterday_clicks: 0,
+                        yesterday_installs: 0,
+                        last_7_days_clicks: 0,
+                        last_7_days_installs: 0,
+                        clicks: 0,
+                        installs: 0
+                    };
                 }
-                dailyMap[d.link_id].clicks += (d.clicks || 0);
-                dailyMap[d.link_id].installs += (d.installs || 0);
+
+                const dClicks = Number(d.clicks || 0);
+                const dInstalls = Number(d.installs || 0);
+                const statDate = d.stat_date ? d.stat_date.split('T')[0] : '';
+
+                // All Time (lifetime from daily stats or fallback)
+                statsMap[linkId].clicks += dClicks;
+                statsMap[linkId].installs += dInstalls;
+
+                // Today
+                if (statDate === todayStr) {
+                    statsMap[linkId].today_clicks += dClicks;
+                    statsMap[linkId].today_installs += dInstalls;
+                }
+
+                // Yesterday
+                if (statDate === yesterdayStr) {
+                    statsMap[linkId].yesterday_clicks += dClicks;
+                    statsMap[linkId].yesterday_installs += dInstalls;
+                }
+
+                // Last 7 Days
+                if (statDate && new Date(statDate) >= sevenDaysAgo) {
+                    statsMap[linkId].last_7_days_clicks += dClicks;
+                    statsMap[linkId].last_7_days_installs += dInstalls;
+                }
             });
         }
 
         const enrichedLinks = links.map(l => {
-            const fClicks = dailyMap[l.id] ? dailyMap[l.id].clicks : 0;
-            const fInstalls = dailyMap[l.id] ? dailyMap[l.id].installs : 0;
+            const lStats = statsMap[l.id] || {
+                today_clicks: 0,
+                today_installs: 0,
+                yesterday_clicks: 0,
+                yesterday_installs: 0,
+                last_7_days_clicks: 0,
+                last_7_days_installs: 0,
+                clicks: Number(l.clicks || 0),
+                installs: Number(l.installs || 0)
+            };
 
             return {
                 ...l,
-                filtered_clicks: fClicks,
-                filtered_installs: fInstalls
+                ...lStats,
+                // Fallback for compatibility
+                filtered_clicks: lStats.clicks,
+                filtered_installs: lStats.installs
             };
         });
 

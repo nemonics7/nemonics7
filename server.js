@@ -232,15 +232,16 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
         const { data: dailyStats, error: dailyError } = await supabase.from('daily_stats').select('*').eq('user_id', userId);
         if (dailyError) console.error("Error fetching daily stats:", dailyError);
 
-        // Date calculations (YYYY-MM-DD format)
-        const todayStr = new Date().toISOString().split('T')[0];
+        // Correct IST Date Calculations
+        const todayStr = getTodayIST();
         
-        const yesterdayDate = new Date();
-        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-        const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+        const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+        const yesterdayIST = new Date(nowIST);
+        yesterdayIST.setDate(nowIST.getDate() - 1);
+        const yesterdayStr = yesterdayIST.toISOString().split('T')[0];
 
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const sevenDaysAgoIST = new Date(nowIST);
+        sevenDaysAgoIST.setDate(nowIST.getDate() - 7);
 
         // Maps to hold metrics for different filters
         const statsMap = {};
@@ -282,7 +283,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
                 }
 
                 // Last 7 Days
-                if (statDate && new Date(statDate) >= sevenDaysAgo) {
+                if (statDate && new Date(statDate) >= sevenDaysAgoIST) {
                     statsMap[linkId].last_7_days_clicks += dClicks;
                     statsMap[linkId].last_7_days_installs += dInstalls;
                 }
@@ -341,7 +342,7 @@ app.get('/s/:shortCode', async (req, res) => {
         // 2. Update total clicks in links table
         await supabase.from('links').update({ clicks: (link.clicks || 0) + 1 }).eq('id', link.id);
 
-        // 3. Bulletproof Daily Stats Increment using RPC or Safe Fetch-Update/Insert
+        // 3. Bulletproof Daily Stats Increment using IST Date
         const todayStr = getTodayIST();
 
         const { data: existingDaily } = await supabase

@@ -180,7 +180,6 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
         const userMap = {};
         if (users) users.forEach(u => { userMap[u.id] = u.username; });
 
-        // Fetch today's stats using IST date
         const todayStr = getTodayIST();
         const { data: dailyStats } = await supabase.from('daily_stats').select('*').eq('stat_date', todayStr);
         const dailyMap = {};
@@ -223,45 +222,46 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
 // --- USER API ROUTES ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
+    const { startDate, endDate } = req.query;
+
     try {
         const { data: links, error } = await supabase.from('links').select('*').eq('user_id', userId).order('created_at', { ascending: false });
         if (error) return res.status(500).json({ error: error.message });
         
-        const todayStr = getTodayIST();
-        const { data: dailyStats } = await supabase.from('daily_stats').select('*').eq('stat_date', todayStr).eq('user_id', userId);
+        // Fetch daily stats based on date range if provided
+        let dailyQuery = supabase.from('daily_stats').select('*').eq('user_id', userId);
+        if (startDate && endDate) {
+            dailyQuery = dailyQuery.gte('stat_date', startDate).lte('stat_date', endDate);
+        }
+
+        const { data: dailyStats } = await dailyQuery;
         const dailyMap = {};
         if (dailyStats) {
             dailyStats.forEach(d => {
-                dailyMap[d.link_id] = { clicks: d.clicks || 0, installs: d.installs || 0 };
+                if (!dailyMap[d.link_id]) {
+                    dailyMap[d.link_id] = { clicks: 0, installs: 0 };
+                }
+                dailyMap[d.link_id].clicks += (d.clicks || 0);
+                dailyMap[d.link_id].installs += (d.installs || 0);
             });
         }
 
-        let totalClicks = 0, totalInstalls = 0, totalEarnings = 0;
-        let todayClicks = 0, todayInstalls = 0;
-
         const enrichedLinks = links.map(l => {
-            const tClicks = dailyMap[l.id] ? dailyMap[l.id].clicks : 0;
-            const tInstalls = dailyMap[l.id] ? dailyMap[l.id].installs : 0;
-
-            totalClicks += (l.clicks || 0);
-            totalInstalls += (l.installs || 0);
-            totalEarnings += ((l.installs || 0) * (l.rate_per_install || 0));
-
-            todayClicks += tClicks;
-            todayInstalls += tInstalls;
+            const fClicks = dailyMap[l.id] ? dailyMap[l.id].clicks : 0;
+            const fInstalls = dailyMap[l.id] ? dailyMap[l.id].installs : 0;
 
             return {
                 ...l,
-                today_clicks: tClicks,
-                today_installs: tInstalls
+                filtered_clicks: fClicks,
+                filtered_installs: fInstalls
             };
         });
 
-        res.json({ 
-            links: enrichedLinks, 
-            stats: { totalClicks, totalInstalls, totalEarnings, todayClicks, todayInstalls } 
-        });
-    } catch (err) { res.status(500).json({ error: 'Server error' }); }
+        res.json({ links: enrichedLinks });
+    } catch (err) { 
+        console.error("Error in /api/user/links:", err);
+        res.status(500).json({ error: 'Server error' }); 
+    }
 });
 
 // --- SHORT URL REDIRECT ROUTE ---
@@ -291,7 +291,6 @@ app.get('/s/:shortCode', async (req, res) => {
         // 3. Bulletproof Daily Stats Increment using RPC or Safe Fetch-Update/Insert
         const todayStr = getTodayIST();
 
-        // Pehle check karo ki aaj ki date ki entry mojood hai ya nahi
         const { data: existingDaily } = await supabase
             .from('daily_stats')
             .select('id, clicks')
@@ -300,13 +299,11 @@ app.get('/s/:shortCode', async (req, res) => {
             .maybeSingle();
 
         if (existingDaily) {
-            // Agar entry hai toh clicks ko +1 kar do
             await supabase
                 .from('daily_stats')
                 .update({ clicks: (existingDaily.clicks || 0) + 1 })
                 .eq('id', existingDaily.id);
         } else {
-            // Agar entry nahi hai toh nayi row insert karo (clicks: 1)
             const { error: insErr } = await supabase
                 .from('daily_stats')
                 .insert([{
@@ -317,7 +314,6 @@ app.get('/s/:shortCode', async (req, res) => {
                     stat_date: todayStr
                 }]);
 
-            // Agar parallel requests ki wajah se race condition aayi ho aur insert fail ho jaye, toh dubara update try karo
             if (insErr) {
                 const { data: retryDaily } = await supabase
                     .from('daily_stats')

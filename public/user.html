@@ -89,7 +89,7 @@
                     <div class="flex flex-col lg:flex-row justify-between items-center gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 relative">
                         <div>
                             <h2 class="text-sm font-bold text-cyan-600 uppercase tracking-wider">Overall Performance Overview</h2>
-                            <p class="text-[11px] text-slate-500 mt-0.5">View and filter performance statistics.</p>
+                            <p class="text-[11px] text-slate-500 mt-0.5">View performance statistics.</p>
                         </div>
 
                         <!-- Quick Filter & Custom Date Dropdown Box -->
@@ -102,63 +102,44 @@
                             <!-- Dropdown Box -->
                             <div id="quickFilterDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 z-50 space-y-2">
                                 <button onclick="selectQuickFilter('today', 'Today')" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-cyan-600 rounded-xl transition-all">Today</button>
-                                <button onclick="selectQuickFilter('yesterday', 'Yesterday')" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-cyan-600 rounded-xl transition-all">Yesterday</button>
-                                <button onclick="selectQuickFilter('last7', 'Last 7 Days')" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-cyan-600 rounded-xl transition-all">Last 7 Days</button>
-                                <button onclick="selectQuickFilter('last30', 'Last 30 Days')" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-cyan-600 rounded-xl transition-all">Last 30 Days</button>
-                                
-                                <div class="border-t border-slate-100 my-1 pt-2">
-                                    <p class="text-[10px] text-slate-400 font-bold uppercase px-1 mb-1">Custom Range</p>
-                                    <div class="flex gap-2">
-                                        <div class="flex-1">
-                                            <span class="text-[9px] text-slate-400">From</span>
-                                            <input type="date" id="startDate" onchange="filterByCustomDate()" class="w-full bg-slate-50 text-[11px] text-slate-700 p-1.5 rounded-lg border border-slate-200">
-                                        </div>
-                                        <div class="flex-1">
-                                            <span class="text-[9px] text-slate-400">To</span>
-                                            <input type="date" id="endDate" onchange="filterByCustomDate()" class="w-full bg-slate-50 text-[11px] text-slate-700 p-1.5 rounded-lg border border-slate-200">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="border-t border-slate-100 my-1"></div>
-                                <button onclick="selectQuickFilter('reset', 'All Time')" class="w-full text-left px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-all">Reset Filter</button>
+                                <button onclick="selectQuickFilter('all', 'All Time')" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-cyan-600 rounded-xl transition-all">All Time</button>
                             </div>
                         </div>
                     </div>
 
                     <!-- Stat Cards Grid with Soft Glow & Matching Background Tints -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 pt-2">
-                        <!-- Total Clicks Card (Cyan Tint & Glow) -->
+                        <!-- Total Clicks Card -->
                         <div class="p-6 rounded-3xl bg-cyan-50/40 border border-cyan-100 flex items-center justify-between shadow-lg shadow-cyan-500/5">
                             <div>
-                                <p class="text-xs font-bold uppercase tracking-wider text-cyan-800">Total Clicks</p>
+                                <p class="text-xs font-bold uppercase tracking-wider text-cyan-800" id="clicksLabelTitle">Today Clicks</p>
                                 <h4 id="statTotalClicks" class="text-3xl font-extrabold text-cyan-600 mt-2">0</h4>
                             </div>
                             <div class="w-12 h-12 rounded-2xl bg-cyan-100 border border-cyan-200 flex items-center justify-center text-xl shadow-sm">🖱️</div>
                         </div>
 
-                        <!-- Total Installs Card (Amber Tint & Glow) -->
+                        <!-- Total Installs Card -->
                         <div class="p-6 rounded-3xl bg-amber-50/40 border border-amber-100 flex items-center justify-between shadow-lg shadow-amber-500/5">
                             <div>
-                                <p class="text-xs font-bold uppercase tracking-wider text-amber-800">Total Installs</p>
+                                <p class="text-xs font-bold uppercase tracking-wider text-amber-800" id="installsLabelTitle">Today Installs</p>
                                 <h4 id="statTotalInstalls" class="text-3xl font-extrabold text-amber-600 mt-2">0</h4>
                             </div>
                             <div class="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-200 flex items-center justify-center text-xl shadow-sm">📦</div>
                         </div>
 
-                        <!-- Total Earnings Card (Emerald Tint & Glow) -->
+                        <!-- Total Earnings Card -->
                         <div class="p-6 rounded-3xl bg-emerald-50/40 border border-emerald-100 flex items-center justify-between shadow-lg shadow-emerald-500/5">
                             <div>
-                                <p class="text-xs font-bold uppercase tracking-wider text-emerald-800">Total Earnings</p>
+                                <p class="text-xs font-bold uppercase tracking-wider text-emerald-800" id="earningsLabelTitle">Today Earnings</p>
                                 <h4 id="statTotalEarnings" class="text-3xl font-extrabold text-emerald-600 mt-2">₹0.00</h4>
                             </div>
                             <div class="w-12 h-12 rounded-2xl bg-emerald-100 border border-emerald-200 flex items-center justify-center text-xl shadow-sm">💰</div>
                         </div>
 
-                        <!-- Average CR Card (Indigo Tint & Glow) -->
+                        <!-- Average CR Card -->
                         <div class="p-6 rounded-3xl bg-indigo-50/40 border border-indigo-100 flex items-center justify-between shadow-lg shadow-indigo-500/5">
                             <div>
-                                <p class="text-xs font-bold uppercase tracking-wider text-indigo-800">Average CR (%)</p>
+                                <p class="text-xs font-bold uppercase tracking-wider text-indigo-800">Conversion Rate</p>
                                 <h4 id="statAvgCr" class="text-3xl font-extrabold text-indigo-600 mt-2">0%</h4>
                             </div>
                             <div class="w-12 h-12 rounded-2xl bg-indigo-100 border border-indigo-200 flex items-center justify-center text-xl shadow-sm">📈</div>
@@ -168,12 +149,11 @@
 
                 <!-- Calendar & Detailed Breakdown Table -->
                 <div class="glass-card p-6 sm:p-8 rounded-3xl space-y-6">
-                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-4">Detailed Daily Breakdown</h3>
+                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-4">Link Performance Breakdown</h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-sm border-collapse">
                             <thead>
                                 <tr class="border-b border-slate-100 text-slate-400 uppercase text-[11px] tracking-wider">
-                                    <th class="p-4">Date</th>
                                     <th class="p-4">Link Name</th>
                                     <th class="p-4 text-center">Clicks</th>
                                     <th class="p-4 text-center">Installs</th>
@@ -196,8 +176,8 @@
                             <tr class="border-b border-slate-100 text-slate-400 uppercase text-[11px] tracking-wider">
                                 <th class="p-4">Name</th>
                                 <th class="p-4">Short URL</th>
-                                <th class="p-4 text-center">Clicks</th>
-                                <th class="p-4 text-center">Installs</th>
+                                <th class="p-4 text-center">Total Clicks</th>
+                                <th class="p-4 text-center">Total Installs</th>
                                 <th class="p-4 text-center">CR (%)</th>
                             </tr>
                         </thead>
@@ -218,11 +198,11 @@
                         <h3 id="earningsRateDisplay" class="text-3xl font-extrabold text-cyan-600">₹0.00</h3>
                     </div>
                     <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                        <p class="text-xs font-bold text-slate-500 uppercase">Total Installs</p>
+                        <p class="text-xs font-bold text-slate-500 uppercase">Total Installs (All-Time)</p>
                         <h3 id="earningsInstallsDisplay" class="text-3xl font-extrabold text-amber-600">0</h3>
                     </div>
                     <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                        <p class="text-xs font-bold text-slate-500 uppercase">Total Income</p>
+                        <p class="text-xs font-bold text-slate-500 uppercase">Total Income (All-Time)</p>
                         <h3 id="earningsTotalDisplay" class="text-3xl font-extrabold text-emerald-600">₹0.00</h3>
                     </div>
                 </div>
@@ -238,12 +218,11 @@
     <script>
         let rawUserLinks = [];
         let userRatePerInstall = 0;
+        let currentFilterMode = 'today'; // 'today' or 'all'
 
         window.onload = async function() {
             await loadUserProfile();
             await loadUserLinks();
-            
-            selectQuickFilter('today', 'Today');
             
             setInterval(loadUserLinks, 30000);
         };
@@ -295,7 +274,7 @@
                     rawUserLinks = [];
                 }
 
-                filterByDateRange();
+                updateDashboardView();
                 renderLinksTable(rawUserLinks);
             } catch (err) {
                 console.error("Error loading user links:", err);
@@ -304,18 +283,25 @@
             }
         }
 
-        function updateStatsDisplay(links) {
+        function updateDashboardView() {
             let totalClicks = 0;
             let totalInstalls = 0;
             let totalEarnings = 0;
+            let allTimeInstalls = 0;
+            let allTimeEarnings = 0;
 
-            links.forEach(link => {
-                totalClicks += Number(link.clicks || 0);
-                const installs = Number(link.installs || 0);
-                totalInstalls += installs;
+            rawUserLinks.forEach(link => {
+                const cClicks = currentFilterMode === 'today' ? Number(link.today_clicks || 0) : Number(link.clicks || 0);
+                const cInstalls = currentFilterMode === 'today' ? Number(link.today_installs || 0) : Number(link.installs || 0);
+                
+                totalClicks += cClicks;
+                totalInstalls += cInstalls;
                 
                 const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
-                totalEarnings += installs * linkRate;
+                totalEarnings += cInstalls * linkRate;
+
+                allTimeInstalls += Number(link.installs || 0);
+                allTimeEarnings += Number(link.installs || 0) * linkRate;
             });
 
             const overallCr = totalClicks > 0 ? ((totalInstalls / totalClicks) * 100).toFixed(1) : 0;
@@ -325,8 +311,35 @@
             document.getElementById('statTotalEarnings').textContent = `₹${totalEarnings.toFixed(2)}`;
             document.getElementById('statAvgCr').textContent = `${overallCr}%`;
 
-            document.getElementById('earningsInstallsDisplay').textContent = totalInstalls.toLocaleString();
-            document.getElementById('earningsTotalDisplay').textContent = `₹${totalEarnings.toFixed(2)}`;
+            // Update Earnings Tab All-time values
+            document.getElementById('earningsInstallsDisplay').textContent = allTimeInstalls.toLocaleString();
+            document.getElementById('earningsTotalDisplay').textContent = `₹${allTimeEarnings.toFixed(2)}`;
+
+            renderBreakdownTable(rawUserLinks);
+        }
+
+        function renderBreakdownTable(links) {
+            const tbody2 = document.getElementById('calendarTableBody');
+            tbody2.innerHTML = '';
+            
+            if (!links || links.length === 0) {
+                tbody2.innerHTML = `<tr><td colspan="4" class="text-center p-8 text-slate-400">No data available.</td></tr>`;
+                return;
+            }
+
+            links.forEach(link => {
+                const cClicks = currentFilterMode === 'today' ? Number(link.today_clicks || 0) : Number(link.clicks || 0);
+                const cInstalls = currentFilterMode === 'today' ? Number(link.today_installs || 0) : Number(link.installs || 0);
+                const cr = cClicks > 0 ? ((cInstalls / cClicks) * 100).toFixed(1) : 0;
+
+                tbody2.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-4 font-bold text-slate-800">${link.link_name || 'Link'}</td>
+                        <td class="p-4 text-center text-cyan-600 font-bold">${cClicks}</td>
+                        <td class="p-4 text-center text-amber-600 font-bold">${cInstalls}</td>
+                        <td class="p-4 text-center font-black text-indigo-600">${cr}%</td>
+                    </tr>`;
+            });
         }
 
         function renderLinksTable(links) {
@@ -341,7 +354,7 @@
 
             links.forEach(link => {
                 const shortUrl = `${baseUrl}/s/${link.short_code}`;
-                const cr = link.clicks > 0 ? ((link.installs / link.clicks) * 100).toFixed(1) : 0;
+                const cr = Number(link.clicks) > 0 ? ((Number(link.installs) / Number(link.clicks)) * 100).toFixed(1) : 0;
 
                 tbody.innerHTML += `
                     <tr class="hover:bg-slate-50 transition-colors">
@@ -365,83 +378,22 @@
         }
 
         function selectQuickFilter(type, label) {
+            currentFilterMode = type;
             document.getElementById('selectedFilterLabel').textContent = label;
             document.getElementById('quickFilterDropdown').classList.add('hidden');
 
-            if (type === 'reset') {
-                document.getElementById('startDate').value = '';
-                document.getElementById('endDate').value = '';
-                filterByDateRange();
-                return;
-            }
-
-            const today = new Date();
-            let startStr = '';
-            let endStr = today.toISOString().split('T')[0];
-
+            // Update card titles based on filter mode
             if (type === 'today') {
-                startStr = endStr;
-            } else if (type === 'yesterday') {
-                const yest = new Date();
-                yest.setDate(today.getDate() - 1);
-                startStr = yest.toISOString().split('T')[0];
-                endStr = startStr;
-            } else if (type === 'last7') {
-                const d = new Date();
-                d.setDate(today.getDate() - 7);
-                startStr = d.toISOString().split('T')[0];
-            } else if (type === 'last30') {
-                const d = new Date();
-                d.setDate(today.getDate() - 30);
-                startStr = d.toISOString().split('T')[0];
+                document.getElementById('clicksLabelTitle').textContent = 'Today Clicks';
+                document.getElementById('installsLabelTitle').textContent = 'Today Installs';
+                document.getElementById('earningsLabelTitle').textContent = 'Today Earnings';
+            } else {
+                document.getElementById('clicksLabelTitle').textContent = 'Total Clicks';
+                document.getElementById('installsLabelTitle').textContent = 'Total Installs';
+                document.getElementById('earningsLabelTitle').textContent = 'Total Earnings';
             }
 
-            document.getElementById('startDate').value = startStr;
-            document.getElementById('endDate').value = endStr;
-            filterByDateRange();
-        }
-
-        function filterByCustomDate() {
-            document.getElementById('selectedFilterLabel').textContent = 'Custom Range';
-            filterByDateRange();
-        }
-
-        function filterByDateRange() {
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-
-            const filtered = rawUserLinks.filter(l => {
-                if (!l.created_at) return true;
-                const linkDate = l.created_at.split('T')[0];
-                if (startDate && endDate) return linkDate >= startDate && linkDate <= endDate;
-                if (startDate) return linkDate >= startDate;
-                if (endDate) return linkDate <= endDate;
-                return true;
-            });
-
-            updateStatsDisplay(filtered);
-
-            const tbody2 = document.getElementById('calendarTableBody');
-            tbody2.innerHTML = '';
-            
-            if (!filtered || filtered.length === 0) {
-                tbody2.innerHTML = `<tr><td colspan="5" class="text-center p-8 text-slate-400">No data available for selected date range.</td></tr>`;
-                return;
-            }
-
-            filtered.forEach(link => {
-                const cr = link.clicks > 0 ? ((link.installs / link.clicks) * 100).toFixed(1) : 0;
-                const dateOnly = link.created_at ? link.created_at.split('T')[0] : 'N/A';
-
-                tbody2.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="p-4 text-xs text-slate-500 font-medium">${dateOnly}</td>
-                        <td class="p-4 font-bold text-slate-800">${link.link_name || 'Link'}</td>
-                        <td class="p-4 text-center text-cyan-600 font-bold">${link.clicks || 0}</td>
-                        <td class="p-4 text-center text-amber-600 font-bold">${link.installs || 0}</td>
-                        <td class="p-4 text-center font-black text-indigo-600">${cr}%</td>
-                    </tr>`;
-            });
+            updateDashboardView();
         }
 
         window.addEventListener('click', function(e) {

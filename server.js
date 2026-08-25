@@ -288,23 +288,26 @@ app.get('/s/:shortCode', async (req, res) => {
         // 2. Update total clicks in links table
         await supabase.from('links').update({ clicks: (link.clicks || 0) + 1 }).eq('id', link.id);
 
-        // 3. Update or Insert Today's Daily Stats safely using IST date & Upsert
+        // 3. Bulletproof Daily Stats Increment using RPC or Safe Fetch-Update/Insert
         const todayStr = getTodayIST();
 
+        // Pehle check karo ki aaj ki date ki entry mojood hai ya nahi
         const { data: existingDaily } = await supabase
             .from('daily_stats')
-            .select('*')
+            .select('id, clicks')
             .eq('link_id', link.id)
             .eq('stat_date', todayStr)
             .maybeSingle();
 
         if (existingDaily) {
+            // Agar entry hai toh clicks ko +1 kar do
             await supabase
                 .from('daily_stats')
                 .update({ clicks: (existingDaily.clicks || 0) + 1 })
                 .eq('id', existingDaily.id);
         } else {
-            const { error: insertErr } = await supabase
+            // Agar entry nahi hai toh nayi row insert karo (clicks: 1)
+            const { error: insErr } = await supabase
                 .from('daily_stats')
                 .insert([{
                     link_id: link.id,
@@ -313,15 +316,16 @@ app.get('/s/:shortCode', async (req, res) => {
                     installs: 0,
                     stat_date: todayStr
                 }]);
-                
-            // Agar race condition ki wajah se row pehle hi ban chuki ho toh fallback karke update kar do
-            if (insertErr) {
+
+            // Agar parallel requests ki wajah se race condition aayi ho aur insert fail ho jaye, toh dubara update try karo
+            if (insErr) {
                 const { data: retryDaily } = await supabase
                     .from('daily_stats')
-                    .select('*')
+                    .select('id, clicks')
                     .eq('link_id', link.id)
                     .eq('stat_date', todayStr)
                     .maybeSingle();
+
                 if (retryDaily) {
                     await supabase
                         .from('daily_stats')

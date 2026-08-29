@@ -234,28 +234,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
             dailyStats.forEach(d => {
                 dailyMap[d.link_id] = { clicks: d.clicks || 0, installs: d.installs || 0 };
             });
-        }
-
-        let totalClicks = 0, totalInstalls = 0, totalEarnings = 0;
-        let todayClicks = 0, todayInstalls = 0;
-
-        const enrichedLinks = links.map(l => {
-            const tClicks = dailyMap[l.id] ? dailyMap[l.id].clicks : 0;
-            const tInstalls = dailyMap[l.id] ? dailyMap[l.id].installs : 0;
-
-            totalClicks += (l.clicks || 0);
-            totalInstalls += (l.installs || 0);
-            totalEarnings += ((l.installs || 0) * (l.rate_per_install || 0));
-
-            todayClicks += tClicks;
-            todayInstalls += tInstalls;
-
-            return {
-                ...l,
-                today_clicks: tClicks,
-                today_installs: tInstalls
-            };
-        });
+      
 
         res.json({ 
             links: enrichedLinks, 

@@ -281,3 +281,69 @@ app.get('/s/:shortCode', async (req, res) => {
         }
 
         const targetUrl = link.target_url.trim();
+
+        // 1. Log click in link_clicks
+        await supabase.from('link_clicks').insert([{ link_id: link.id, ip_address: clientIp }]);
+        
+        // 2. Update total clicks in links table
+        await supabase.from('links').update({ clicks: (link.clicks || 0) + 1 }).eq('id', link.id);
+
+        // 3. Bulletproof Daily Stats Increment using RPC or Safe Fetch-Update/Insert
+        const todayStr = getTodayIST();
+
+        // Pehle check karo ki aaj ki date ki entry mojood hai ya nahi
+        const { data: existingDaily } = await supabase
+            .from('daily_stats')
+            .select('id, clicks')
+            .eq('link_id', link.id)
+            .eq('stat_date', todayStr)
+            .maybeSingle();
+
+        if (existingDaily) {
+            // Agar entry hai toh clicks ko +1 kar do
+            await supabase
+                .from('daily_stats')
+                .update({ clicks: (existingDaily.clicks || 0) + 1 })
+                .eq('id', existingDaily.id);
+        } else {
+            // Agar entry nahi hai toh nayi row insert karo (clicks: 1)
+            const { error: insErr } = await supabase
+                .from('daily_stats')
+                .insert([{
+                    link_id: link.id,
+                    user_id: link.user_id,
+                    clicks: 1,
+                    installs: 0,
+                    stat_date: todayStr
+                }]);
+
+            // Agar parallel requests ki wajah se race condition aayi ho aur insert fail ho jaye, toh dubara update try karo
+            if (insErr) {
+                const { data: retryDaily } = await supabase
+                    .from('daily_stats')
+                    .select('id, clicks')
+                    .eq('link_id', link.id)
+                    .eq('stat_date', todayStr)
+                    .maybeSingle();
+
+                if (retryDaily) {
+                    await supabase
+                        .from('daily_stats')
+                        .update({ clicks: (retryDaily.clicks || 0) + 1 })
+                        .eq('id', retryDaily.id);
+                }
+            }
+        }
+
+        return res.redirect(targetUrl);
+    } catch (err) {
+        console.error("Redirect error:", err);
+        res.status(500).send('Server Error');
+    }
+});
+
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });
+}
+
+module.exports = app;

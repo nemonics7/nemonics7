@@ -220,13 +220,19 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     }
 });
 
-// --- 100% WORKING USER LINKS & STATS API ---
+// --- FINAL USER LINKS API WITH PROPER "ALL TIME" SUPPORT ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
-    const { startDate, endDate } = req.query;
+    let { startDate, endDate } = req.query;
+
+    // Agar frontend se 'all-time', 'all', ya blank dates aayein toh unhe ignore kar do
+    if (!startDate || !endDate || startDate === 'all' || endDate === 'all') {
+        startDate = null;
+        endDate = null;
+    }
 
     try {
-        // 1. User ke saare active links hamesha fetch honge (Empty kabhi nahi honge)
+        // 1. User ke saare links fetch karo
         const { data: links, error } = await supabase
             .from('links')
             .select('*')
@@ -239,9 +245,10 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
         }
         
         let dailyMap = {};
+        const isFiltered = startDate && endDate;
 
-        // 2. Agar date range di hai toh daily stats nikalo, warna aaj ka default lo
-        if (startDate && endDate) {
+        // 2. Agar specific date range di hai (jaise today, yesterday, custom), tabhi daily_stats se data nikalo
+        if (isFiltered) {
             const { data: dailyStats } = await supabase
                 .from('daily_stats')
                 .select('*')
@@ -258,30 +265,23 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
                     dailyMap[d.link_id].installs += (d.installs || 0);
                 });
             }
-        } else {
-            const todayStr = getTodayIST();
-            const { data: dailyStats } = await supabase
-                .from('daily_stats')
-                .select('*')
-                .eq('stat_date', todayStr)
-                .eq('user_id', userId);
-
-            if (dailyStats) {
-                dailyStats.forEach(d => {
-                    dailyMap[d.link_id] = { clicks: d.clicks || 0, installs: d.installs || 0 };
-                });
-            }
         }
 
         let totalClicks = 0, totalInstalls = 0, totalEarnings = 0;
 
-        // 3. Links ko map karo (fallback to main link clicks/installs agar daily stats na ho)
+        // 3. Map links: Agar "All Time" hai toh links table ka lifetime data, range hai toh daily_stats ka data
         const enrichedLinks = links.map(l => {
-            const stats = dailyMap[l.id];
-            
-            // Agar date range mein stats mil gaye toh woh lo, nahi toh link ka total ya 0
-            const c = stats ? stats.clicks : (startDate && endDate ? 0 : (l.clicks || 0));
-            const i = stats ? stats.installs : (startDate && endDate ? 0 : (l.installs || 0));
+            let c = 0, i = 0;
+
+            if (isFiltered) {
+                const stats = dailyMap[l.id] || { clicks: 0, installs: 0 };
+                c = stats.clicks;
+                i = stats.installs;
+            } else {
+                // All-Time Data: Seedha links table ke total lifetime clicks/installs
+                c = l.clicks || 0;
+                i = l.installs || 0;
+            }
 
             const linkRate = Number(l.rate_per_install || req.session.user.rate_per_install || 0);
 

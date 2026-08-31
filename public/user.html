@@ -549,18 +549,6 @@ function selectQuickFilter(filterType, labelText) {
     // Yahan bhi asli function call hoga
     loadUserLinksWithDates(startDate, endDate);
 }
-        // Yeh function dates ko pakad kar tumhare wale loadUserLinks() ko chalayega
-function loadUserLinksWithDates(startDate, endDate) {
-    // Agar tumhara original loadUserLinks bina parameters ke likha hai, 
-    // toh hum global variables mein dates set kar dete hain ya URL override kar dete hain:
-    window.currentStartDate = startDate;
-    window.currentEndDate = endDate;
-    
-    // Agar tumhara original function khud hi url banata hai, toh use call kar do:
-    loadUserLinks();
-}
-        
-        
     </script>
 </body>
 </html>

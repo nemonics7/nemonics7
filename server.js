@@ -168,7 +168,7 @@ app.post('/api/admin/assign-links', isAdmin, async (req, res) => {
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
-
+// userlinks
 app.get('/api/admin/all-links', isAdmin, async (req, res) => {
     try {
         const { data: links, error: linkError } = await supabase.from('links').select('*').order('created_at', { ascending: false });
@@ -220,15 +220,14 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     }
 });
 
-// --- FINAL USER LINKS API WITH PROPER "ALL TIME" SUPPORT ---
+
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     let { startDate, endDate } = req.query;
 
-    // Agar frontend se 'all-time', 'all', ya blank dates aayein toh unhe ignore kar do
-    if (!startDate || !endDate || startDate === 'all' || endDate === 'all') {
-        startDate = null;
-        endDate = null;
+    // Agar frontend se dates missing hain toh error return karo
+    if (!startDate || !endDate) {
+        return res.status(400).json({ error: 'Start date and End date are required' });
     }
 
     try {
@@ -245,43 +244,32 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
         }
         
         let dailyMap = {};
-        const isFiltered = startDate && endDate;
 
-        // 2. Agar specific date range di hai (jaise today, yesterday, custom), tabhi daily_stats se data nikalo
-        if (isFiltered) {
-            const { data: dailyStats } = await supabase
-                .from('daily_stats')
-                .select('*')
-                .eq('user_id', userId)
-                .gte('stat_date', startDate)
-                .lte('stat_date', endDate);
+        // 2. Sirf selected Date Range ka data 'daily_stats' table se uthao
+        const { data: dailyStats } = await supabase
+            .from('daily_stats')
+            .select('*')
+            .eq('user_id', userId)
+            .gte('stat_date', startDate)
+            .lte('stat_date', endDate);
 
-            if (dailyStats) {
-                dailyStats.forEach(d => {
-                    if (!dailyMap[d.link_id]) {
-                        dailyMap[d.link_id] = { clicks: 0, installs: 0 };
-                    }
-                    dailyMap[d.link_id].clicks += (d.clicks || 0);
-                    dailyMap[d.link_id].installs += (d.installs || 0);
-                });
-            }
+        if (dailyStats) {
+            dailyStats.forEach(d => {
+                if (!dailyMap[d.link_id]) {
+                    dailyMap[d.link_id] = { clicks: 0, installs: 0 };
+                }
+                dailyMap[d.link_id].clicks += (d.clicks || 0);
+                dailyMap[d.link_id].installs += (d.installs || 0);
+            });
         }
 
         let totalClicks = 0, totalInstalls = 0, totalEarnings = 0;
 
-        // 3. Map links: Agar "All Time" hai toh links table ka lifetime data, range hai toh daily_stats ka data
+        // 3. Links ke sath stats map karo
         const enrichedLinks = links.map(l => {
-            let c = 0, i = 0;
-
-            if (isFiltered) {
-                const stats = dailyMap[l.id] || { clicks: 0, installs: 0 };
-                c = stats.clicks;
-                i = stats.installs;
-            } else {
-                // All-Time Data: Seedha links table ke total lifetime clicks/installs
-                c = l.clicks || 0;
-                i = l.installs || 0;
-            }
+            const stats = dailyMap[l.id] || { clicks: 0, installs: 0 };
+            const c = stats.clicks;
+            const i = stats.installs;
 
             const linkRate = Number(l.rate_per_install || req.session.user.rate_per_install || 0);
 

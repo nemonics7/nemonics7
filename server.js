@@ -384,6 +384,55 @@ app.get('/s/:shortCode', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+// --- ADMIN EDIT / UPSERT DAILY STATS FOR ANY DATE ---
+app.post('/api/admin/edit-daily-stats', isAdmin, async (req, res) => {
+    const { link_id, user_id, stat_date, clicks, installs } = req.body;
+
+    if (!link_id || !stat_date) {
+        return res.status(400).json({ error: 'Link ID and Stat Date are required' });
+    }
+
+    try {
+        // Check karo ki us date ki entry pehle se exist karti hai ya nahi
+        const { data: existing } = await supabase
+            .from('daily_stats')
+            .select('id')
+            .eq('link_id', link_id)
+            .eq('stat_date', stat_date)
+            .maybeSingle();
+
+        if (existing) {
+            // Agar entry hai toh update kar do
+            const { error: updateErr } = await supabase
+                .from('daily_stats')
+                .update({ 
+                    clicks: parseInt(clicks) || 0, 
+                    installs: parseInt(installs) || 0 
+                })
+                .eq('id', existing.id);
+
+            if (updateErr) return res.status(500).json({ error: updateErr.message });
+        } else {
+            // Agar naya din hai aur entry nahi hai, toh nayi row insert kar do
+            const { error: insertErr } = await supabase
+                .from('daily_stats')
+                .insert([{
+                    link_id: parseInt(link_id),
+                    user_id: parseInt(user_id),
+                    stat_date: stat_date,
+                    clicks: parseInt(clicks) || 0,
+                    installs: parseInt(installs) || 0
+                }]);
+
+            if (insertErr) return res.status(500).json({ error: insertErr.message });
+        }
+
+        res.json({ success: true, message: 'Daily stats updated successfully for ' + stat_date });
+    } catch (err) {
+        console.error("Edit daily stats error:", err);
+        res.status(500).json({ error: 'Server error while editing stats' });
+    }
+});
 
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });

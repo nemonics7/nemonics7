@@ -220,98 +220,41 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     }
 });
 
-// --- BULLETPROOF USER API ROUTES ---
-app.get('/api/user/links', isAuthenticated, async (req, res) => {
-    const userId = req.session.user.id;
-    const { startDate, endDate } = req.query;
+// --- FIXED & DEBUGGED RANGE STATS API ---
+app.get('/api/stats/range', isAuthenticated, async (req, res) => {
+    let { startDate, endDate } = req.query;
+    const userId = Number(req.session.user.id); // Ensure integer format
+    const isAdminUser = req.session.user.role === 'admin';
+
+    console.log("Fetching stats for User:", userId, "Role:", req.session.user.role, "Dates:", startDate, endDate);
+
+    if (!startDate || !endDate) {
+        return res.status(400).json({ error: 'Start date and end date are required' });
+    }
 
     try {
-        // 1. User ke saare links nikalo
-        const { data: links, error } = await supabase
-            .from('links')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false });
+        let query = supabase
+            .from('daily_stats')
+            .select('*, links(id, link_name, target_url, short_code, rate_per_install)')
+            .gte('stat_date', startDate)
+            .lte('stat_date', endDate);
 
-        if (error) return res.status(500).json({ error: error.message });
-        
-        let dailyMap = {};
-        let useDailyStats = false;
-
-        // 2. Agar date range di gayi hai
-        if (startDate && endDate) {
-            const { data: dailyStats } = await supabase
-                .from('daily_stats')
-                .select('*')
-                .eq('user_id', userId)
-                .gte('stat_date', startDate)
-                .lte('stat_date', endDate);
-
-            if (dailyStats && dailyStats.length > 0) {
-                useDailyStats = true;
-                dailyStats.forEach(d => {
-                    if (!dailyMap[d.link_id]) {
-                        dailyMap[d.link_id] = { clicks: 0, installs: 0 };
-                    }
-                    dailyMap[d.link_id].clicks += (d.clicks || 0);
-                    dailyMap[d.link_id].installs += (d.installs || 0);
-                });
-            }
-        } else {
-            // Default: Aaj ki date ya agar daily_stats mein data na ho toh links table ka data use hoga
-            const todayStr = getTodayIST();
-            const { data: dailyStats } = await supabase
-                .from('daily_stats')
-                .select('*')
-                .eq('stat_date', todayStr)
-                .eq('user_id', userId);
-
-            if (dailyStats && dailyStats.length > 0) {
-                useDailyStats = true;
-                dailyStats.forEach(d => {
-                    dailyMap[d.link_id] = { clicks: d.clicks || 0, installs: d.installs || 0 };
-                });
-            }
+        if (!isAdminUser) {
+            query = query.eq('user_id', userId);
         }
 
-        let totalClicks = 0, totalInstalls = 0, totalEarnings = 0;
+        const { data, error } = await query;
+        
+        if (error) {
+            console.error("Supabase query error:", error);
+            return res.status(500).json({ error: error.message });
+        }
 
-        const enrichedLinks = links.map(l => {
-            let c = 0, i = 0;
-
-            if (useDailyStats) {
-                // Agar daily stats mil gaye toh uske hisaab se lo
-                const stats = dailyMap[l.id] || { clicks: 0, installs: 0 };
-                c = stats.clicks;
-                i = stats.installs;
-            } else {
-                // Fallback: Agar daily stats mein entries nahi hain, toh links table ke main columns use karo
-                c = l.clicks || 0;
-                i = l.installs || 0;
-            }
-
-            const linkRate = Number(l.rate_per_install || req.session.user.rate_per_install || 0);
-
-            totalClicks += c;
-            totalInstalls += i;
-            totalEarnings += (i * linkRate);
-
-            return {
-                ...l,
-                clicks: c,
-                installs: i,
-                today_clicks: c,
-                today_installs: i
-            };
-        });
-
-        res.json({ 
-            links: enrichedLinks, 
-            stats: { totalClicks, totalInstalls, totalEarnings } 
-        });
-    } catch (err) { 
-        console.error("User links fetch error:", err);
-        res.status(500).json({ error: 'Server error' }); 
+        console.log("Fetched Data Count:", data ? data.length : 0);
+        res.json({ success: true, data });
+    } catch (err) {
+        console.error("Server error:", err);
+        res.status(500).json({ error: 'Server error while fetching range stats' });
     }
 });
 // --- SHORT URL REDIRECT ROUTE ---

@@ -82,11 +82,31 @@ app.get('/api/me', isAuthenticated, async (req, res) => {
     res.json(req.session.user);
 });
 
-// --- ADMIN API ROUTES ---
 app.get('/api/admin/users', isAdmin, async (req, res) => {
-    const { data, error } = await supabase.from('users').select('id, username, role, total_installs, rate_per_install');
-    if (error) return res.status(500).json({ error: error.message });
-    res.json(data);
+    try {
+        const { data: users, error } = await supabase.from('users').select('id, username, role, rate_per_install');
+        if (error) return res.status(500).json({ error: error.message });
+
+        // Fetch all links to calculate total installs per user dynamically
+        const { data: links } = await supabase.from('links').select('user_id, installs');
+        
+        const userInstallsMap = {};
+        if (links) {
+            links.forEach(l => {
+                if (!userInstallsMap[l.user_id]) userInstallsMap[l.user_id] = 0;
+                userInstallsMap[l.user_id] += (l.installs || 0);
+            });
+        }
+
+        const enrichedUsers = users.map(u => ({
+            ...u,
+            total_installs: userInstallsMap[u.id] || 0
+        }));
+
+        res.json(enrichedUsers);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
 });
 
 // Update User Rate per install

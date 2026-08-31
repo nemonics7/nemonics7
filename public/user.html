@@ -288,7 +288,7 @@
 
         async function loadUserLinks() {
             try {
-                let url = `/api/user/links?startDate=${window.currentStartDate}&endDate=${window.currentEndDate}`;
+                let url = '/api/user/links';
                 const today = new Date();
 
                 if (currentFilterMode === 'today') {

@@ -384,7 +384,7 @@ app.get('/s/:shortCode', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
-// --- ADMIN EDIT / UPSERT DAILY STATS FOR ANY DATE ---
+// --- ADMIN EDIT / UPSERT DAILY STATS WITH AUTO-SYNC TO LINKS TABLE ---
 app.post('/api/admin/edit-daily-stats', isAdmin, async (req, res) => {
     const { link_id, user_id, stat_date, clicks, installs } = req.body;
 
@@ -393,7 +393,10 @@ app.post('/api/admin/edit-daily-stats', isAdmin, async (req, res) => {
     }
 
     try {
-        // Check karo ki us date ki entry pehle se exist karti hai ya nahi
+        const newClicks = parseInt(clicks) || 0;
+        const newInstalls = parseInt(installs) || 0;
+
+        // 1. Check karo ki us date ki entry pehle se exist karti hai ya nahi
         const { data: existing } = await supabase
             .from('daily_stats')
             .select('id')
@@ -402,38 +405,59 @@ app.post('/api/admin/edit-daily-stats', isAdmin, async (req, res) => {
             .maybeSingle();
 
         if (existing) {
-            // Agar entry hai toh update kar do
+            // Update existing entry
             const { error: updateErr } = await supabase
                 .from('daily_stats')
-                .update({ 
-                    clicks: parseInt(clicks) || 0, 
-                    installs: parseInt(installs) || 0 
-                })
+                .update({ clicks: newClicks, installs: newInstalls })
                 .eq('id', existing.id);
 
             if (updateErr) return res.status(500).json({ error: updateErr.message });
         } else {
-            // Agar naya din hai aur entry nahi hai, toh nayi row insert kar do
+            // Insert new entry
             const { error: insertErr } = await supabase
                 .from('daily_stats')
                 .insert([{
                     link_id: parseInt(link_id),
                     user_id: parseInt(user_id),
                     stat_date: stat_date,
-                    clicks: parseInt(clicks) || 0,
-                    installs: parseInt(installs) || 0
+                    clicks: newClicks,
+                    installs: newInstalls
                 }]);
 
             if (insertErr) return res.status(500).json({ error: insertErr.message });
         }
 
-        res.json({ success: true, message: 'Daily stats updated successfully for ' + stat_date });
+        // 2. CRITICAL FIX: Saare din ke stats ko sum karke 'links' table ke total clicks & installs ko update karo
+        const { data: allStats, error: sumErr } = await supabase
+            .from('daily_stats')
+            .select('clicks, installs')
+            .eq('link_id', link_id);
+
+        if (!sumErr && allStats) {
+            let totalLinkClicks = 0;
+            let totalLinkInstalls = 0;
+
+            allStats.forEach(s => {
+                totalLinkClicks += (s.clicks || 0);
+                totalLinkInstalls += (s.installs || 0);
+            });
+
+            // Links table mein total lifetime clicks aur installs update kar do
+            await supabase
+                .from('links')
+                .update({ 
+                    clicks: totalLinkClicks, 
+                    installs: totalLinkInstalls 
+                })
+                .eq('id', link_id);
+        }
+
+        res.json({ success: true, message: 'Daily stats updated and lifetime totals synced successfully!' });
     } catch (err) {
         console.error("Edit daily stats error:", err);
         res.status(500).json({ error: 'Server error while editing stats' });
     }
 });
-
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });
 }

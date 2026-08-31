@@ -491,6 +491,65 @@ async function fetchCustomRangeData(startDate, endDate) {
     // Yahan dashboard tables/cards update kar do
     renderDashboard(data.links, data.stats);
 }
+        // Dropdown toggle karne ke liye (agar pehle se hai toh use rehne dena)
+function toggleQuickFilterDropdown() {
+    const dropdown = document.getElementById('quickFilterDropdown');
+    dropdown.classList.toggle('hidden');
+}
+
+// Custom Range select hone par date inputs box dikhane ke liye
+function openCustomRangePicker() {
+    document.getElementById('quickFilterDropdown').classList.add('hidden');
+    document.getElementById('customRangeModal').classList.remove('hidden');
+}
+
+// Custom dates apply karne ke liye
+function applyCustomRange() {
+    const startDate = document.getElementById('customStartDate').value;
+    const endDate = document.getElementById('customEndDate').value;
+
+    if (!startDate || !endDate) {
+        alert("Please select both start and end dates!");
+        return;
+    }
+
+    // Label change karke dates dikha do
+    document.getElementById('selectedFilterLabel').innerText = `${startDate} to ${endDate}`;
+    document.getElementById('customRangeModal').classList.add('hidden');
+
+    // Yahan apni data fetch karne wali API function call kar lo
+    fetchDashboardData(startDate, endDate);
+}
+
+// Quick filters (Today, Yesterday, Last 7 Days) ke liye function
+function selectQuickFilter(filterType, labelText) {
+    document.getElementById('selectedFilterLabel').innerText = labelText;
+    document.getElementById('quickFilterDropdown').classList.add('hidden');
+    document.getElementById('customRangeModal').classList.add('hidden');
+
+    const today = new Date();
+    let startDate = '';
+    let endDate = '';
+    const formatDate = (d) => d.toISOString().split('T')[0];
+
+    if (filterType === 'today') {
+        startDate = formatDate(today);
+        endDate = formatDate(today);
+    } else if (filterType === 'yesterday') {
+        const yest = new Date(today);
+        yest.setDate(today.getDate() - 1);
+        startDate = formatDate(yest);
+        endDate = formatDate(yest);
+    } else if (filterType === '7days') {
+        const past = new Date(today);
+        past.setDate(today.getDate() - 6);
+        startDate = formatDate(past);
+        endDate = formatDate(today);
+    }
+
+    // Data fetch karo
+    fetchDashboardData(startDate, endDate);
+}
     </script>
 </body>
 </html>

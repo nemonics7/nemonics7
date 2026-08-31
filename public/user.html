@@ -465,6 +465,14 @@
             await fetch('/api/logout', { method: 'POST' }); 
             window.location.href = '/login'; 
         }
+        // Example: Jab user custom date range select kare
+async function fetchCustomRangeData(startDate, endDate) {
+    const response = await fetch(`/api/user/links?startDate=${startDate}&endDate=${endDate}`);
+    const data = await response.json();
+    
+    // Yahan dashboard tables/cards update kar do
+    renderDashboard(data.links, data.stats);
+}
     </script>
 </body>
 </html>

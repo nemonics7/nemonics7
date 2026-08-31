@@ -472,6 +472,45 @@
         }
 
         async function logout() { await fetch('/api/logout', { method: 'POST' }); window.location.href = '/login'; }
+        async function saveDailyStats(linkId, userId) {
+    // Admin ke input fields se values uthao
+    const statDate = document.getElementById(`statDate_${linkId}`).value; // e.g., '2026-08-31'
+    const clicks = document.getElementById(`clicksInput_${linkId}`).value;
+    const installs = document.getElementById(`installsInput_${linkId}`).value;
+
+    if (!statDate) {
+        alert("Please select a date!");
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/edit-daily-stats', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                link_id: linkId,
+                user_id: userId,
+                stat_date: statDate,
+                clicks: Number(clicks),
+                installs: Number(installs)
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert("Stats updated successfully for " + statDate);
+            location.reload(); // Page refresh karke updated data dikhane ke liye
+        } else {
+            alert("Error: " + result.error);
+        }
+    } catch (err) {
+        console.error("Failed to update stats:", err);
+        alert("Something went wrong!");
+    }
+}
     </script>
 </body>
 </html>

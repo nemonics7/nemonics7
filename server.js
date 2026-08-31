@@ -169,6 +169,7 @@ app.post('/api/admin/assign-links', isAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
+// --- UPDATED ADMIN ALL-LINKS API (FIXED 0 CLICKS/INSTALLS ISSUE) ---
 app.get('/api/admin/all-links', isAdmin, async (req, res) => {
     try {
         const { data: links, error: linkError } = await supabase.from('links').select('*').order('created_at', { ascending: false });
@@ -180,6 +181,19 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
         const userMap = {};
         if (users) users.forEach(u => { userMap[u.id] = u.username; });
 
+        // Fetch all daily_stats to accurately aggregate total lifetime clicks & installs per link
+        const { data: allDailyStats } = await supabase.from('daily_stats').select('link_id, clicks, installs');
+        const totalsMap = {};
+        if (allDailyStats) {
+            allDailyStats.forEach(d => {
+                if (!totalsMap[d.link_id]) {
+                    totalsMap[d.link_id] = { clicks: 0, installs: 0 };
+                }
+                totalsMap[d.link_id].clicks += (d.clicks || 0);
+                totalsMap[d.link_id].installs += (d.installs || 0);
+            });
+        }
+
         // Fetch today's stats using IST date
         const todayStr = getTodayIST();
         const { data: dailyStats } = await supabase.from('daily_stats').select('*').eq('stat_date', todayStr);
@@ -190,12 +204,17 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
             });
         }
 
-        const enrichedLinks = links.map(link => ({ 
-            ...link, 
-            username: userMap[link.user_id] || 'Unassigned',
-            today_clicks: dailyMap[link.id] ? dailyMap[link.id].clicks : 0,
-            today_installs: dailyMap[link.id] ? dailyMap[link.id].installs : 0
-        }));
+        const enrichedLinks = links.map(link => {
+            const totalStats = totalsMap[link.id] || { clicks: link.clicks || 0, installs: link.installs || 0 };
+            return { 
+                ...link, 
+                clicks: totalStats.clicks > 0 ? totalStats.clicks : (link.clicks || 0),
+                installs: totalStats.installs > 0 ? totalStats.installs : (link.installs || 0),
+                username: userMap[link.user_id] || 'Unassigned',
+                today_clicks: dailyMap[link.id] ? dailyMap[link.id].clicks : 0,
+                today_installs: dailyMap[link.id] ? dailyMap[link.id].installs : 0
+            };
+        });
 
         res.json(enrichedLinks);
     } catch (err) { res.status(500).json({ error: 'Server error' }); }
@@ -225,13 +244,11 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     let { startDate, endDate } = req.query;
 
-    // Agar frontend se dates nahi aayi toh error bhej do
     if (!startDate || !endDate) {
         return res.status(400).json({ error: 'Start date and End date are required' });
     }
 
     try {
-        // 1. User ke saare links fetch karo
         const { data: links, error } = await supabase
             .from('links')
             .select('*')
@@ -245,7 +262,6 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
         
         let dailyMap = {};
 
-        // 2. Sirf selected Date Range ka data 'daily_stats' se uthao
         const { data: dailyStats } = await supabase
             .from('daily_stats')
             .select('*')
@@ -265,7 +281,6 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
 
         let totalClicks = 0, totalInstalls = 0, totalEarnings = 0;
 
-        // 3. Links ke sath stats map karo
         const enrichedLinks = links.map(l => {
             const stats = dailyMap[l.id] || { clicks: 0, installs: 0 };
             const c = stats.clicks;
@@ -314,13 +329,9 @@ app.get('/s/:shortCode', async (req, res) => {
 
         const targetUrl = link.target_url.trim();
 
-        // 1. Log click in link_clicks
         await supabase.from('link_clicks').insert([{ link_id: link.id, ip_address: clientIp }]);
-        
-        // 2. Update total clicks in links table
         await supabase.from('links').update({ clicks: (link.clicks || 0) + 1 }).eq('id', link.id);
 
-        // 3. Bulletproof Daily Stats Increment using RPC or Safe Fetch-Update/Insert
         const todayStr = getTodayIST();
 
         const { data: existingDaily } = await supabase

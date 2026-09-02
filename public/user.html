@@ -414,6 +414,8 @@
                     allTimeUserLinks = allTimeData.links;
                 } else if (Array.isArray(allTimeData)) {
                     allTimeUserLinks = allTimeData;
+                } else {
+                    allTimeUserLinks = [];
                 }
                 updateEarningsAndPayoutSection();
 
@@ -450,9 +452,12 @@
                 } else if (Array.isArray(data)) {
                     rawUserLinks = data;
                     updateAnalyticsStatsFromLocal();
+                } else if (data && data.links && Array.isArray(data.links)) {
+                    rawUserLinks = data.links;
+                    updateAnalyticsStats(data.stats);
                 } else {
                     rawUserLinks = [];
-                    updateAnalyticsStats(null);
+                    updateAnalyticsStatsFromLocal();
                 }
 
                 renderLinksTable(allTimeUserLinks);
@@ -460,18 +465,29 @@
             } catch (err) {
                 console.error("Error loading user links:", err);
                 rawUserLinks = [];
+                updateAnalyticsStatsFromLocal();
             }
         }
 
         function updateAnalyticsStats(stats) {
-            if (!stats) {
+            if (!stats || (stats.totalClicks === 0 && stats.totalInstalls === 0 && stats.totalEarnings === 0 && rawUserLinks.length > 0)) {
                 updateAnalyticsStatsFromLocal();
                 return;
             }
 
-            const totalClicks = stats.totalClicks || 0;
-            const totalInstalls = stats.totalInstalls || 0;
-            const totalEarnings = stats.totalEarnings || 0;
+            const totalClicks = Number(stats.totalClicks || 0);
+            const totalInstalls = Number(stats.totalInstalls || 0);
+            
+            // Manual calculation override to ensure correct rate mapping if backend returns 0 earnings
+            let totalEarnings = Number(stats.totalEarnings || 0);
+            if (totalEarnings === 0 && totalInstalls > 0) {
+                rawUserLinks.forEach(link => {
+                    const installs = Number(link.installs || 0);
+                    const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
+                    totalEarnings += installs * linkRate;
+                });
+            }
+
             const overallCr = totalClicks > 0 ? ((totalInstalls / totalClicks) * 100).toFixed(1) : 0;
 
             document.getElementById('statTotalClicks').textContent = totalClicks.toLocaleString();

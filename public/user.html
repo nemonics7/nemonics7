@@ -241,11 +241,12 @@
                     <table class="w-full text-left text-sm border-collapse">
                         <thead>
                             <tr class="border-b border-slate-100 text-slate-400 uppercase text-[11px] tracking-wider">
-                                <th class="p-4">Name[cite: 1]</th>
-                                <th class="p-4">Short URL[cite: 1]</th>
-                                <th class="p-4 text-center">Total Clicks[cite: 1]</th>
-                                <th class="p-4 text-center">Total Installs[cite: 1]</th>
-                                <th class="p-4 text-center">CR (%)[cite: 1]</th>
+                                <th class="p-4">Name</th>
+                                <th class="p-4">Short URL</th>
+                                <th class="p-4 text-center">Rate / Install</th>
+                                <th class="p-4 text-center">Total Clicks</th>
+                                <th class="p-4 text-center">Total Installs</th>
+                                <th class="p-4 text-center">CR (%)</th>
                             </tr>
                         </thead>
                         <tbody id="userLinksTableBody" class="divide-y divide-slate-100"></tbody>
@@ -259,11 +260,7 @@
                     <h2 class="text-xl font-bold text-emerald-600">💰 My Earnings & Payout Summary</h2>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                        <p class="text-xs font-bold text-slate-500 uppercase">Rate Per Install</p>
-                        <h3 id="earningsRateDisplay" class="text-3xl font-extrabold text-cyan-600">₹0.00</h3>
-                    </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                         <p class="text-xs font-bold text-slate-500 uppercase">Total Installs (All-Time)</p>
                         <h3 id="earningsInstallsDisplay" class="text-3xl font-extrabold text-amber-600">0</h3>
@@ -275,7 +272,7 @@
                 </div>
 
                 <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-sm text-slate-600">
-                    <p>💡 Note: Your earnings are calculated dynamically based on your total successful installs multiplied by your assigned rate per install[cite: 1].</p>
+                    <p>💡 Note: Your earnings are calculated dynamically based on your total successful installs multiplied by your assigned rate per install.</p>
                 </div>
             </div>
 
@@ -316,7 +313,6 @@
                     if(mobEl) mobEl.textContent = welcomeTextVal;
 
                     userRatePerInstall = Number(user.rate_per_install || 0);
-                    document.getElementById('earningsRateDisplay').textContent = `₹${userRatePerInstall.toFixed(2)}`;
                 }
             } catch (err) {
                 console.error("Error loading user profile:", err);
@@ -456,7 +452,7 @@
             tbody2.innerHTML = '';
             
             if (!links || links.length === 0) {
-                tbody2.innerHTML = `<tr><td colspan="4" class="text-center p-8 text-slate-400">No data available.[cite: 1]</td></tr>`;
+                tbody2.innerHTML = `<tr><td colspan="4" class="text-center p-8 text-slate-400">No data available.</td></tr>`;
                 return;
             }
 
@@ -481,7 +477,7 @@
             const baseUrl = window.location.origin;
 
             if (!links || links.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-8 text-slate-400">No active links assigned yet.[cite: 1]</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-slate-400">No active links assigned yet.</td></tr>`;
                 return;
             }
 
@@ -490,6 +486,7 @@
                 const clicks = Number(link.clicks || 0);
                 const installs = Number(link.installs || 0);
                 const cr = clicks > 0 ? ((installs / clicks) * 100).toFixed(1) : 0;
+                const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
 
                 tbody.innerHTML += `
                     <tr class="hover:bg-slate-50 transition-colors">
@@ -500,6 +497,7 @@
                                 <button onclick="copyToClipboard('${shortUrl}', this)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg border border-slate-200 font-semibold transition-all">📋 Copy</button>
                             </div>
                         </td>
+                        <td class="p-4 text-center font-bold text-emerald-600">₹${linkRate.toFixed(2)}</td>
                         <td class="p-4 text-center text-cyan-600 font-bold">${clicks}</td>
                         <td class="p-4 text-center text-amber-600 font-bold">${installs}</td>
                         <td class="p-4 text-center text-indigo-600 font-bold">${cr}%</td>
@@ -525,7 +523,7 @@
             const endDate = document.getElementById('customEndDate').value;
 
             if (!startDate || !endDate) {
-                alert("Please select both start and end dates![cite: 1]");
+                alert("Please select both start and end dates!");
                 return;
             }
 

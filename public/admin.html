@@ -395,36 +395,45 @@
             } catch (err) { console.error(err); }
         }
 
-        async function loadAdminPayoutLogs() {
-            try {
-                const res = await fetch('/api/admin/payout-logs');
-                const logs = await res.json();
-                const tbody = document.getElementById('adminPayoutLogsTableBody');
-                if(!tbody) return;
-                tbody.innerHTML = '';
+       async function loadAdminPayoutLogs() {
+    try {
+        const res = await fetch('/api/admin/payout-logs');
+        const logs = await res.json();
+        
+        const tbody = document.getElementById('adminPayoutLogsTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
 
-                if (!logs || logs.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-slate-400">No payout or deduction logs found.</td></tr>`;
-                    return;
-                }
-
-                logs.forEach(log => {
-                    const formattedDate = new Date(log.created_at).toLocaleString('en-IN', {
-                        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                    });
-
-                    tbody.innerHTML += `
-                        <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
-                            <td class="p-3 font-bold text-slate-800">User ID: ${log.user_id}</td>
-                            <td class="p-3 text-slate-600 font-semibold">${formattedDate}</td>
-                            <td class="p-3 text-slate-800">${log.note || 'Payout / Deduction'}</td>
-                            <td class="p-3 text-center font-extrabold text-rose-600">-₹${Math.abs(Number(log.amount)).toFixed(2)}</td>
-                        </tr>`;
-                });
-            } catch (err) {
-                console.error("Error loading payout logs:", err);
-            }
+        // Yeh check sabse zaroori hai: Agar logs array nahi hai (jaise error object aaya ho) toh yahin rok dein
+        if (!Array.isArray(logs)) {
+            console.error("Unauthorized or invalid logs data:", logs);
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-rose-500 font-semibold">Access Denied / Failed to load logs</td></tr>`;
+            return;
         }
+
+        if (logs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-slate-400">No payout or deduction logs found.</td></tr>`;
+            return;
+        }
+
+        logs.forEach(log => {
+            const formattedDate = new Date(log.created_at).toLocaleString('en-IN', {
+                day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+
+            tbody.innerHTML += `
+                <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
+                    <td class="p-3 font-bold text-slate-800">User ID: ${log.user_id}</td>
+                    <td class="p-3 text-slate-600 font-semibold">${formattedDate}</td>
+                    <td class="p-3 text-slate-800">${log.note || 'Payout / Deduction'}</td>
+                    <td class="p-3 text-center font-extrabold text-rose-600">-₹${Math.abs(Number(log.amount)).toFixed(2)}</td>
+                </tr>
+            `;
+        });
+    } catch (err) {
+        console.error("Error loading payout logs:", err);
+    }
+}
 
         async function deductUserBalance(e) {
             e.preventDefault();

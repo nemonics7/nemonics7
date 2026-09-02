@@ -330,6 +330,21 @@
 
         async function loadAllLinks() {
             try {
+                // 1. Fetch Payout/Deduction logs to calculate total deductions
+                let totalDeductions = 0;
+                try {
+                    const logsRes = await fetch('/api/admin/payout-logs');
+                    const logs = await logsRes.json();
+                    if (Array.isArray(logs)) {
+                        logs.forEach(log => {
+                            totalDeductions += Math.abs(Number(log.amount) || 0);
+                        });
+                    }
+                } catch (e) {
+                    console.error("Could not fetch logs for deduction calculation", e);
+                }
+
+                // 2. Fetch links data
                 const res = await fetch('/api/admin/all-links');
                 const links = await res.json();
                 const tbody = document.getElementById('adminLinksTableBody');
@@ -338,7 +353,7 @@
                 let activeLinksCount = 0;
                 let totalClicksCount = 0;
                 let totalInstallsCount = 0;
-                let totalEarningsSum = 0;
+                let grossEarningsSum = 0;
 
                 if (links && links.length > 0) {
                     activeLinksCount = links.length;
@@ -349,7 +364,7 @@
                         
                         totalClicksCount += clicks;
                         totalInstallsCount += installs;
-                        totalEarningsSum += (installs * rate);
+                        grossEarningsSum += (installs * rate);
 
                         const cr = clicks > 0 ? ((installs / clicks) * 100).toFixed(1) : 0;
                         
@@ -390,10 +405,13 @@
                     if(tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-slate-400">No links found.</td></tr>`;
                 }
 
+                // Final Net Earnings calculation (Gross Earnings - Total Deductions)
+                const netEarningsFinal = grossEarningsSum - totalDeductions;
+
                 document.getElementById('statActiveLinks').innerText = activeLinksCount;
                 document.getElementById('statTotalClicks').innerText = totalClicksCount.toLocaleString();
                 document.getElementById('statTotalInstalls').innerText = totalInstallsCount.toLocaleString();
-                document.getElementById('statTotalEarnings').innerText = '₹' + totalEarningsSum.toFixed(2);
+                document.getElementById('statTotalEarnings').innerText = '₹' + netEarningsFinal.toFixed(2);
             } catch (err) { console.error("Error loading links:", err); }
         }
 

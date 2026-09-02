@@ -351,15 +351,26 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
         const userMap = {};
         if (users) users.forEach(u => { userMap[u.id] = u.username; });
 
-        const { data: allDailyStats } = await supabase.from('daily_stats').select('link_id, clicks, installs');
+        // Saare daily stats fetch karein link_id ke sath
+        const { data: allDailyStats } = await supabase.from('daily_stats').select('link_id, stat_date, clicks, installs');
+        
         const totalsMap = {};
+        const fullDailyStatsMap = {}; // Har link ke saare daily stats store karne ke liye
+
         if (allDailyStats) {
             allDailyStats.forEach(d => {
+                // Total calculation map
                 if (!totalsMap[d.link_id]) {
                     totalsMap[d.link_id] = { clicks: 0, installs: 0 };
                 }
                 totalsMap[d.link_id].clicks += (d.clicks || 0);
                 totalsMap[d.link_id].installs += (d.installs || 0);
+
+                // Full daily stats array map per link
+                if (!fullDailyStatsMap[d.link_id]) {
+                    fullDailyStatsMap[d.link_id] = [];
+                }
+                fullDailyStatsMap[d.link_id].push(d);
             });
         }
 
@@ -380,12 +391,16 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
                 installs: totalStats.installs > 0 ? totalStats.installs : (link.installs || 0),
                 username: userMap[link.user_id] || 'Unassigned',
                 today_clicks: dailyMap[link.id] ? dailyMap[link.id].clicks : 0,
-                today_installs: dailyMap[link.id] ? dailyMap[link.id].installs : 0
+                today_installs: dailyMap[link.id] ? dailyMap[link.id].installs : 0,
+                daily_stats: fullDailyStatsMap[link.id] || [] // 👈 Yeh line zaroori hai frontend ke liye
             };
         });
 
         res.json(enrichedLinks);
-    } catch (err) { res.status(500).json({ error: 'Server error' }); }
+    } catch (err) { 
+        console.error(err);
+        res.status(500).json({ error: 'Server error' }); 
+    }
 });
 
 app.post('/api/admin/adjust-stats', isAdmin, async (req, res) => {

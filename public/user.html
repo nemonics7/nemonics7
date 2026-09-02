@@ -371,7 +371,8 @@
                     if(data.user) {
                         currentUserTotalPaid = Number(data.user.deductions || data.user.total_paid || 0);
                     }
-                    updateDashboardStatsFromServer(data.stats);
+                    // Pass BOTH stats (for filtered analytics) and payoutStats (for lifetime earnings/payouts)
+                    updateDashboardStatsFromServer(data.stats, data.payoutStats);
                 } else if (Array.isArray(data)) {
                     rawUserLinks = data;
                     updateDashboardView();
@@ -389,12 +390,14 @@
             }
         }
 
-        function updateDashboardStatsFromServer(stats) {
+        // Updated function to split Date-Filtered Stats vs All-Time Payout Stats
+        function updateDashboardStatsFromServer(stats, payoutStats) {
             if (!stats) {
                 updateDashboardView();
                 return;
             }
 
+            // 1. ANALYTICS SECTION CARDS (Changes with Date / Calendar filter)
             const totalClicks = stats.totalClicks || 0;
             const totalInstalls = stats.totalInstalls || 0;
             const totalEarnings = stats.totalEarnings || 0;
@@ -405,11 +408,16 @@
             document.getElementById('statTotalEarnings').textContent = `₹${totalEarnings.toFixed(2)}`;
             document.getElementById('statAvgCr').textContent = `${overallCr}%`;
 
+            // 2. PAYOUT / EARNINGS SECTION CARDS (Always Lifetime / All-Time, unaffected by calendar filter)
             let allTimeGrossEarnings = 0;
-            rawUserLinks.forEach(link => {
-                const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
-                allTimeGrossEarnings += Number(link.installs || 0) * linkRate;
-            });
+            if (payoutStats) {
+                allTimeGrossEarnings = payoutStats.totalEarnings || 0;
+            } else {
+                rawUserLinks.forEach(link => {
+                    const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
+                    allTimeGrossEarnings += Number(link.installs || 0) * linkRate;
+                });
+            }
 
             const netBalance = allTimeGrossEarnings - currentUserTotalPaid;
 

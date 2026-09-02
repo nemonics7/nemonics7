@@ -129,6 +129,7 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
+
 // Update User Rate per install
 app.post('/api/admin/set-rate', isAdmin, async (req, res) => {
     const { userId, rate } = req.body;
@@ -171,12 +172,10 @@ app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
     }
 });
 
-// Deduct Balance / Installs from a User and update links
-// FIXED: Changed payload check to accept either 'amount' or 'amount_deducted'
+// Deduct Balance / Installs from a User and update links, daily_stats & logs
 app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
     const userId = req.params.userId;
-    // Handle both possible payload keys from frontend
-    const amount_deducted = req.body.amount_deducted || req.body.amount;
+    const amount_deducted = req.body.amount_deducted || req.body.amount || req.body.deduction;
     const note = req.body.note;
     
     try {
@@ -185,7 +184,6 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             return res.status(400).json({ error: 'Invalid deduction amount' });
         }
 
-        // 1. Fetch user details to get their rate per install
         const { data: user, error: userErr } = await supabase
             .from('users')
             .select('*')
@@ -197,10 +195,8 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
         }
 
         const userRate = parseFloat(user.rate_per_install) || 1; 
-        // Calculate kitne installs minus karne hain amount ke base par
         const installsToDeduct = Math.round(numAmount / userRate);
 
-        // 2. Fetch user's links to reduce installs from them
         const { data: links, error: linkErr } = await supabase
             .from('links')
             .select('*')
@@ -209,7 +205,6 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
         if (!linkErr && links && links.length > 0) {
             let remainingToDeduct = installsToDeduct;
             
-            // Links me se installs minus karo
             for (let link of links) {
                 if (remainingToDeduct <= 0) break;
                 const currentInstalls = link.installs || 0;
@@ -217,24 +212,44 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
                 
                 if (deductFromThis > 0) {
                     const newInstalls = currentInstalls - deductFromThis;
+                    
                     await supabase
                         .from('links')
                         .update({ installs: newInstalls })
                         .eq('id', link.id);
+
+                    const todayStr = getTodayIST();
+                    const { data: dailyRecord } = await supabase
+                        .from('daily_stats')
+                        .select('*')
+                        .eq('link_id', link.id)
+                        .eq('stat_date', todayStr)
+                        .maybeSingle();
+
+                    if (dailyRecord) {
+                        const updatedDailyInstalls = Math.max(0, (dailyRecord.installs || 0) - deductFromThis);
+                        await supabase
+                            .from('daily_stats')
+                            .update({ installs: updatedDailyInstalls })
+                            .eq('id', dailyRecord.id);
+                    }
                     
                     remainingToDeduct -= deductFromThis;
                 }
             }
         }
 
-        // 3. Save entry with negative amount in payout logs
-        await supabase.from('payout_logs').insert([{
+        const { error: logErr } = await supabase.from('payout_logs').insert([{
             user_id: parseInt(userId),
             amount: -Math.abs(numAmount),
             note: note ? `Deduction: ${note}` : 'Amount Deducted'
         }]);
 
-        res.json({ success: true, message: 'Amount successfully deducted and balance updated!' });
+        if (logErr) {
+            console.error("Payout log insert warning:", logErr.message);
+        }
+
+        res.json({ success: true, message: 'Amount successfully deducted, logs updated & dashboard synced!' });
     } catch (err) {
         console.error("Deduction error:", err);
         res.status(500).json({ error: 'Server error while processing deduction' });
@@ -250,7 +265,6 @@ app.get('/api/admin/payout-logs', isAdmin, async (req, res) => {
             .order('created_at', { ascending: false });
 
         if (error) {
-            // If table doesn't exist yet, return empty array gracefully
             return res.json([]);
         }
 
@@ -375,14 +389,10 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     }
 });
 
-// --- USER LINKS API WITH DATE RANGE FILTER ---
+// --- USER LINKS API WITH SEPARATE FILTERED & ALL-TIME STATS ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     let { startDate, endDate } = req.query;
-
-    if (!startDate || !endDate) {
-        return res.status(400).json({ error: 'Start date and End date are required' });
-    }
 
     try {
         const { data: links, error } = await supabase
@@ -395,51 +405,90 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
             console.error("Links fetch error:", error);
             return res.status(500).json({ error: error.message });
         }
-        
-        let dailyMap = {};
 
-        const { data: dailyStats } = await supabase
+        const linkRateMap = {};
+        links.forEach(l => {
+            linkRateMap[l.id] = Number(l.rate_per_install || req.session.user.rate_per_install || 0);
+        });
+
+        // 1. Fetch ALL-TIME stats for Payout / Balance Section (Unaffected by date filter)
+        const { data: allTimeStats } = await supabase
             .from('daily_stats')
             .select('*')
-            .eq('user_id', userId)
-            .gte('stat_date', startDate)
-            .lte('stat_date', endDate);
+            .eq('user_id', userId);
 
-        if (dailyStats) {
-            dailyStats.forEach(d => {
-                if (!dailyMap[d.link_id]) {
-                    dailyMap[d.link_id] = { clicks: 0, installs: 0 };
-                }
-                dailyMap[d.link_id].clicks += (d.clicks || 0);
-                dailyMap[d.link_id].installs += (d.installs || 0);
+        let allTimeClicks = 0, allTimeInstalls = 0, allTimeEarnings = 0;
+        if (allTimeStats) {
+            allTimeStats.forEach(d => {
+                const c = d.clicks || 0;
+                const i = d.installs || 0;
+                const rate = linkRateMap[d.link_id] || 0;
+                allTimeClicks += c;
+                allTimeInstalls += i;
+                allTimeEarnings += (i * rate);
             });
         }
 
-        let totalClicks = 0, totalInstalls = 0, totalEarnings = 0;
+        // 2. Fetch FILTERED stats for Analytics section (Affected by date filter)
+        let filteredClicks = 0, filteredInstalls = 0, filteredEarnings = 0;
+        let filteredLinks = links;
 
-        const enrichedLinks = links.map(l => {
-            const stats = dailyMap[l.id] || { clicks: 0, installs: 0 };
-            const c = stats.clicks;
-            const i = stats.installs;
+        if (startDate && endDate) {
+            const { data: filteredDailyStats } = await supabase
+                .from('daily_stats')
+                .select('*')
+                .eq('user_id', userId)
+                .gte('stat_date', startDate)
+                .lte('stat_date', endDate);
 
-            const linkRate = Number(l.rate_per_install || req.session.user.rate_per_install || 0);
+            let dailyMap = {};
+            if (filteredDailyStats) {
+                filteredDailyStats.forEach(d => {
+                    if (!dailyMap[d.link_id]) {
+                        dailyMap[d.link_id] = { clicks: 0, installs: 0 };
+                    }
+                    dailyMap[d.link_id].clicks += (d.clicks || 0);
+                    dailyMap[d.link_id].installs += (d.installs || 0);
+                });
+            }
 
-            totalClicks += c;
-            totalInstalls += i;
-            totalEarnings += (i * linkRate);
+            filteredLinks = links.map(l => {
+                const stats = dailyMap[l.id] || { clicks: 0, installs: 0 };
+                return {
+                    ...l,
+                    clicks: stats.clicks,
+                    installs: stats.installs,
+                    today_clicks: stats.clicks,
+                    today_installs: stats.installs
+                };
+            });
 
-            return {
-                ...l,
-                clicks: c,
-                installs: i,
-                today_clicks: c,
-                today_installs: i
-            };
-        });
+            filteredDailyStats.forEach(d => {
+                const c = d.clicks || 0;
+                const i = d.installs || 0;
+                const rate = linkRateMap[d.link_id] || 0;
+                filteredClicks += c;
+                filteredInstalls += i;
+                filteredEarnings += (i * rate);
+            });
+        } else {
+            filteredClicks = allTimeClicks;
+            filteredInstalls = allTimeInstalls;
+            filteredEarnings = allTimeEarnings;
+        }
 
         res.json({ 
-            links: enrichedLinks, 
-            stats: { totalClicks, totalInstalls, totalEarnings } 
+            links: filteredLinks, 
+            stats: { 
+                totalClicks: filteredClicks, 
+                totalInstalls: filteredInstalls, 
+                totalEarnings: filteredEarnings 
+            }, 
+            payoutStats: { 
+                totalClicks: allTimeClicks, 
+                totalInstalls: allTimeInstalls, 
+                totalEarnings: allTimeEarnings 
+            }
         });
     } catch (err) { 
         console.error("User links API error:", err);
@@ -548,7 +597,7 @@ app.post('/api/admin/edit-daily-stats', isAdmin, async (req, res) => {
 
             allStats.forEach(s => {
                 totalLinkClicks += (s.clicks || 0);
-                totalLinkInstalls += (s.installs || 0); // Typo 'instils' was fixed here too
+                totalLinkInstalls += (s.installs || 0);
             });
 
             await supabase

@@ -87,28 +87,48 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
         const { data: users, error } = await supabase.from('users').select('id, username, role, rate_per_install');
         if (error) return res.status(500).json({ error: error.message });
 
-        // Fetch all links to calculate total installs per user dynamically
-        const { data: links } = await supabase.from('links').select('user_id, installs');
+        // Fetch all links to calculate total installs and earnings per user dynamically
+        const { data: links } = await supabase.from('links').select('id, user_id, installs, rate_per_install');
         
-        const userInstallsMap = {};
-        if (links) {
-            links.forEach(l => {
-                if (!userInstallsMap[l.user_id]) userInstallsMap[l.user_id] = 0;
-                userInstallsMap[l.user_id] += (l.installs || 0);
+        // Fetch all daily_stats to get accurate synced installs
+        const { data: allDailyStats } = await supabase.from('daily_stats').select('link_id, installs');
+        const linkInstallsMap = {};
+        if (allDailyStats) {
+            allDailyStats.forEach(d => {
+                if (!linkInstallsMap[d.link_id]) linkInstallsMap[d.link_id] = 0;
+                linkInstallsMap[d.link_id] += (d.installs || 0);
             });
         }
 
-        const enrichedUsers = users.map(u => ({
-            ...u,
-            total_installs: userInstallsMap[u.id] || 0
-        }));
+        const userMap = {};
+        users.forEach(u => {
+            userMap[u.id] = {
+                ...u,
+                total_installs: 0,
+                total_earnings: 0
+            };
+        });
 
+        if (links) {
+            links.forEach(l => {
+                if (userMap[l.user_id]) {
+                    // Use daily_stats installs if available, else link installs
+                    const installs = linkInstallsMap[l.id] !== undefined ? linkInstallsMap[l.id] : (l.installs || 0);
+                    const rate = Number(l.rate_per_install || userMap[l.user_id].rate_per_install || 0);
+                    
+                    userMap[l.user_id].total_installs += installs;
+                    userMap[l.user_id].total_earnings += (installs * rate);
+                }
+            });
+        }
+
+        const enrichedUsers = Object.values(userMap);
         res.json(enrichedUsers);
     } catch (err) {
+        console.error("Admin users API error:", err);
         res.status(500).json({ error: 'Server error' });
     }
 });
-
 // Update User Rate per install
 app.post('/api/admin/set-rate', isAdmin, async (req, res) => {
     const { userId, rate } = req.body;

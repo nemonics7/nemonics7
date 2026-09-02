@@ -151,6 +151,36 @@ app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
     }
 });
 
+// --- NEW: Deduct Balance / Installs Route ---
+app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
+    const userId = req.params.userId;
+    const { amount_deducted, note } = req.body;
+    
+    try {
+        const { data: user, error: userErr } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+        if (userErr || !user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Save entry with negative amount in payout logs to indicate deduction
+        await supabase.from('payout_logs').insert([{
+            user_id: parseInt(userId),
+            amount: -Math.abs(parseFloat(amount_deducted) || 0),
+            note: note ? `Deduction: ${note}` : 'Amount/Balance Deducted'
+        }]).select();
+
+        res.json({ success: true, message: 'Deduction recorded successfully' });
+    } catch (err) {
+        console.error("Deduction error:", err);
+        res.status(500).json({ error: 'Server error while processing deduction' });
+    }
+});
+
 // --- ADMIN PAYOUT LOGS API ROUTE ---
 app.get('/api/admin/payout-logs', isAdmin, async (req, res) => {
     try {
@@ -458,7 +488,7 @@ app.post('/api/admin/edit-daily-stats', isAdmin, async (req, res) => {
 
             allStats.forEach(s => {
                 totalLinkClicks += (s.clicks || 0);
-                totalLinkInstalls += (s.installs || 0);
+                totalLinkInstalls += (s.instils || 0);
             });
 
             await supabase

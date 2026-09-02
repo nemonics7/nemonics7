@@ -246,7 +246,7 @@
                     <h2 class="text-xl font-bold text-emerald-600">💰 My Earnings & Payout Summary</h2>
                 </div>
                 
-                <!-- Earnings Breakdown Cards Grid -->
+                <!-- Earnings Breakdown Cards Grid (Always Lifetime Balance) -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
                     <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 shadow-sm">
                         <p class="text-xs font-bold text-slate-500 uppercase">Total Links Earnings</p>
@@ -262,13 +262,13 @@
                     </div>
                 </div>
 
-                <!-- Chota sa Message jo minus huye paise highlight karega -->
+                <!-- Deduction alert message -->
                 <div id="deductionAlertMsg" class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-semibold flex items-center gap-2">
                     <span>⚠️</span>
                     <span id="deductionMsgText">Ab tak aapke total ₹0.00 minus / paid kiye ja chuke hain.</span>
                 </div>
 
-                <!-- Payout & Deduction History Table (NEW) -->
+                <!-- Payout & Deduction History Table -->
                 <div class="space-y-4 pt-4">
                     <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Payout & Deduction History</h3>
                     <div class="overflow-x-auto border border-slate-200 rounded-2xl">
@@ -291,7 +291,7 @@
 
                 <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-sm text-slate-600 space-y-2">
                     <p class="font-bold text-slate-700">💡 Payout & Deduction Info:</p>
-                    <p>Your total earnings are dynamically accumulated from all your active links based on successful installs. The admin can deduct/pay out cleared amounts, which are updated here instantly without affecting your installs[cite: 4].</p>
+                    <p>Your total earnings are dynamically accumulated from all your active links based on successful installs. The admin can deduct/pay out cleared amounts, which are updated here instantly without affecting your installs.</p>
                 </div>
             </div>
 
@@ -300,6 +300,7 @@
 
     <script>
         let rawUserLinks = [];
+        let allTimeUserLinks = [];
         let userRatePerInstall = 0;
         let currentUserTotalPaid = 0;
         let currentFilterMode = 'today'; 
@@ -325,9 +326,9 @@
 
         async function loadUserProfile() {
             try {
-                const meRes = await fetch('/api/me');
-                if (meRes.ok) {
-                    const user = await meRes.json();
+                const res = await fetch('/api/me');
+                if (res.ok) {
+                    const user = await res.json();
                     const welcomeTextVal = `Welcome, ${user.username || 'User'}`;
                     
                     document.getElementById('welcomeText').textContent = welcomeTextVal;
@@ -335,7 +336,6 @@
                     if(mobEl) mobEl.textContent = welcomeTextVal;
 
                     userRatePerInstall = Number(user.rate_per_install || 0);
-                    currentUserTotalPaid = Number(user.deductions || user.total_paid || 0);
                 }
             } catch (err) {
                 console.error("Error loading user profile:", err);
@@ -353,6 +353,8 @@
 
                 if (!logs || logs.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="3" class="text-center p-6 text-slate-400">No payouts or deductions recorded yet.</td></tr>`;
+                    currentUserTotalPaid = 0;
+                    updateEarningsAndPayoutSection();
                     return;
                 }
 
@@ -375,9 +377,8 @@
                     `;
                 });
 
-                // Update total paid state dynamically from logs
                 currentUserTotalPaid = calculatedTotalPaid;
-                updateDashboardView();
+                updateEarningsAndPayoutSection();
             } catch (err) {
                 console.error("Error loading payout logs:", err);
             }
@@ -406,6 +407,17 @@
 
         async function loadUserLinks() {
             try {
+                // 1. Fetch all-time data for lifetime earnings / payout section
+                const allTimeRes = await fetch('/api/user/links');
+                const allTimeData = await allTimeRes.json();
+                if (allTimeData && Array.isArray(allTimeData.links)) {
+                    allTimeUserLinks = allTimeData.links;
+                } else if (Array.isArray(allTimeData)) {
+                    allTimeUserLinks = allTimeData;
+                }
+                updateEarningsAndPayoutSection();
+
+                // 2. Fetch filtered data for analytics section
                 let url = '/api/user/links';
                 const today = new Date();
 
@@ -434,27 +446,26 @@
                 
                 if (data && Array.isArray(data.links)) {
                     rawUserLinks = data.links;
-                    updateDashboardStatsFromServer(data.stats, data.payoutStats);
+                    updateAnalyticsStats(data.stats);
                 } else if (Array.isArray(data)) {
                     rawUserLinks = data;
-                    updateDashboardView();
+                    updateAnalyticsStatsFromLocal();
                 } else {
                     rawUserLinks = [];
-                    updateDashboardView();
+                    updateAnalyticsStats(null);
                 }
 
-                renderLinksTable(rawUserLinks);
+                renderLinksTable(allTimeUserLinks);
                 renderBreakdownTable(rawUserLinks);
             } catch (err) {
                 console.error("Error loading user links:", err);
                 rawUserLinks = [];
-                renderLinksTable([]);
             }
         }
 
-        function updateDashboardStatsFromServer(stats, payoutStats) {
+        function updateAnalyticsStats(stats) {
             if (!stats) {
-                updateDashboardView();
+                updateAnalyticsStatsFromLocal();
                 return;
             }
 
@@ -467,31 +478,12 @@
             document.getElementById('statTotalInstalls').textContent = totalInstalls.toLocaleString();
             document.getElementById('statTotalEarnings').textContent = `₹${totalEarnings.toFixed(2)}`;
             document.getElementById('statAvgCr').textContent = `${overallCr}%`;
-
-            let allTimeGrossEarnings = 0;
-            if (payoutStats) {
-                allTimeGrossEarnings = payoutStats.totalEarnings || 0;
-            } else {
-                rawUserLinks.forEach(link => {
-                    const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
-                    allTimeGrossEarnings += Number(link.installs || 0) * linkRate;
-                });
-            }
-
-            const netBalance = allTimeGrossEarnings - currentUserTotalPaid;
-
-            document.getElementById('earningsTotalDisplay').textContent = `₹${allTimeGrossEarnings.toFixed(2)}`;
-            document.getElementById('earningsPaidDisplay').textContent = `₹${currentUserTotalPaid.toFixed(2)}`;
-            document.getElementById('earningsNetDisplay').textContent = `₹${netBalance > 0 ? netBalance.toFixed(2) : '0.00'}`;
-            
-            document.getElementById('deductionMsgText').textContent = `Ab tak aapke total ₹${currentUserTotalPaid.toFixed(2)} minus / paid kiye ja chuke hain.`;
         }
 
-        function updateDashboardView() {
+        function updateAnalyticsStatsFromLocal() {
             let totalClicks = 0;
             let totalInstalls = 0;
             let totalEarnings = 0;
-            let allTimeGrossEarnings = 0;
 
             rawUserLinks.forEach(link => {
                 const clicks = Number(link.clicks || 0);
@@ -501,22 +493,35 @@
                 
                 const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
                 totalEarnings += installs * linkRate;
-                allTimeGrossEarnings += installs * linkRate;
             });
 
             const overallCr = totalClicks > 0 ? ((totalInstalls / totalClicks) * 100).toFixed(1) : 0;
-            const netBalance = allTimeGrossEarnings - currentUserTotalPaid;
 
             document.getElementById('statTotalClicks').textContent = totalClicks.toLocaleString();
             document.getElementById('statTotalInstalls').textContent = totalInstalls.toLocaleString();
             document.getElementById('statTotalEarnings').textContent = `₹${totalEarnings.toFixed(2)}`;
             document.getElementById('statAvgCr').textContent = `${overallCr}%`;
+        }
+
+        function updateEarningsAndPayoutSection() {
+            let allTimeGrossEarnings = 0;
+
+            allTimeUserLinks.forEach(link => {
+                const installs = Number(link.installs || 0);
+                const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
+                allTimeGrossEarnings += installs * linkRate;
+            });
+
+            const netBalance = allTimeGrossEarnings - currentUserTotalPaid;
 
             document.getElementById('earningsTotalDisplay').textContent = `₹${allTimeGrossEarnings.toFixed(2)}`;
             document.getElementById('earningsPaidDisplay').textContent = `₹${currentUserTotalPaid.toFixed(2)}`;
             document.getElementById('earningsNetDisplay').textContent = `₹${netBalance > 0 ? netBalance.toFixed(2) : '0.00'}`;
             
-            document.getElementById('deductionMsgText').textContent = `Ab tak aapke total ₹${currentUserTotalPaid.toFixed(2)} minus / paid kiye ja chuke hain.`;
+            const msgEl = document.getElementById('deductionMsgText');
+            if(msgEl) {
+                msgEl.textContent = `Ab tak aapke total ₹${currentUserTotalPaid.toFixed(2)} minus / paid kiye ja chuke hain.`;
+            }
         }
 
         function renderBreakdownTable(links) {
@@ -525,7 +530,7 @@
             tbody2.innerHTML = '';
             
             if (!links || links.length === 0) {
-                tbody2.innerHTML = `<tr><td colspan="4" class="text-center p-8 text-slate-400">No data available.</td></tr>`;
+                tbody2.innerHTML = `<tr><td colspan="4" class="text-center p-8 text-slate-400">No data available for this date filter.</td></tr>`;
                 return;
             }
 

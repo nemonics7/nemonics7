@@ -87,7 +87,6 @@
 
             <!-- TAB 1: OVERVIEW -->
             <div id="asec-overview" class="space-y-6">
-                <!-- Stat Cards Grid -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     <div class="p-5 rounded-3xl bg-cyan-50/40 border border-cyan-100 flex items-center justify-between shadow-lg shadow-cyan-500/5">
                         <div>
@@ -176,7 +175,6 @@
 
             <!-- TAB 3: ASSIGN LINK & CREATE USER -->
             <div id="asec-assign" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Assign Link -->
                 <div class="glass-card p-6 rounded-3xl space-y-4">
                     <h2 class="text-xs font-extrabold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
                         <span>🔗</span> Assign Link to User
@@ -202,7 +200,6 @@
                     </form>
                 </div>
 
-                <!-- Create User -->
                 <div class="glass-card p-6 rounded-3xl space-y-4">
                     <h2 class="text-xs font-extrabold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
                         <span>👤</span> Create Sub-User Account
@@ -221,29 +218,56 @@
                 </div>
             </div>
 
-            <!-- TAB 4: PAYOUT & DEDUCTION LOGS -->
-            <div id="asec-payout-logs" class="hidden glass-card p-6 sm:p-8 rounded-3xl space-y-6">
-                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
-                    <div>
-                        <h2 class="text-base font-bold text-indigo-600">📜 Payout & Deduction History Logs</h2>
-                        <p class="text-[11px] text-slate-500 mt-0.5">Track all historical payouts and deductions processed for users with date & time.</p>
-                    </div>
-                    <button onclick="loadAdminPayoutLogs()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-semibold border border-slate-200 transition-all text-[11px]">🔄 Refresh Logs</button>
+            <!-- TAB 4: PAYOUT & DEDUCTION LOGS (UPDATED WITH DEDUCT FORM) -->
+            <div id="asec-payout-logs" class="hidden space-y-6">
+                <!-- Deduct Balance Box -->
+                <div class="glass-card p-6 rounded-3xl space-y-4">
+                    <h2 class="text-xs font-extrabold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
+                        <span>💸</span> Deduct Amount from User Balance (Without Changing Installs)
+                    </h2>
+                    <form id="deductBalanceForm" onsubmit="deductUserBalance(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Select User</label>
+                            <select id="deductUserSelect" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-cyan-600 text-xs"></select>
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Deduct Amount (₹)</label>
+                            <input type="number" id="deductAmount" placeholder="0.00" step="0.01" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-cyan-600 text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Reason / Note</label>
+                            <input type="text" id="deductNote" placeholder="e.g. Penalty / Adjustment" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-cyan-600 text-xs">
+                        </div>
+                        <div>
+                            <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl shadow-md transition-all text-xs">Deduct Balance</button>
+                        </div>
+                    </form>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-[11px] border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider">
-                                <th class="p-3">User ID</th>
-                                <th class="p-3">Date & Time</th>
-                                <th class="p-3">Note / Reason</th>
-                                <th class="p-3 text-center">Amount Paid / Deducted</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminPayoutLogsTableBody" class="divide-y divide-slate-100">
-                            <tr><td colspan="4" class="text-center p-4 text-slate-400">Loading logs...</td></tr>
-                        </tbody>
-                    </table>
+
+                <!-- Logs Table Box -->
+                <div class="glass-card p-6 sm:p-8 rounded-3xl space-y-6">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                        <div>
+                            <h2 class="text-base font-bold text-indigo-600">📜 Payout & Deduction History Logs</h2>
+                            <p class="text-[11px] text-slate-500 mt-0.5">Track all historical payouts and deductions processed for users with date & time.</p>
+                        </div>
+                        <button onclick="loadAdminPayoutLogs()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-semibold border border-slate-200 transition-all text-[11px]">🔄 Refresh Logs</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-[11px] border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider">
+                                    <th class="p-3">User ID</th>
+                                    <th class="p-3">Date & Time</th>
+                                    <th class="p-3">Note / Reason</th>
+                                    <th class="p-3 text-center">Amount Paid / Deducted</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminPayoutLogsTableBody" class="divide-y divide-slate-100">
+                                <tr><td colspan="4" class="text-center p-4 text-slate-400">Loading logs...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -284,7 +308,10 @@
                 const res = await fetch('/api/admin/users');
                 const users = await res.json();
                 const select = document.getElementById('userSelect');
+                const deductSelect = document.getElementById('deductUserSelect');
+                
                 if(select) select.innerHTML = '<option value="">-- Choose User --</option>';
+                if(deductSelect) deductSelect.innerHTML = '<option value="">-- Choose User --</option>';
 
                 let totalUsersCount = 0;
                 let globalInstalls = 0;
@@ -295,6 +322,7 @@
                         if(u.role !== 'admin') {
                             totalUsersCount++;
                             if(select) select.innerHTML += `<option value="${u.id}">${u.username} (ID: ${u.id})</option>`;
+                            if(deductSelect) deductSelect.innerHTML += `<option value="${u.id}">${u.username} (ID: ${u.id})</option>`;
                             
                             const installs = Number(u.total_installs || 0);
                             const rate = Number(u.rate_per_install || 0);
@@ -311,7 +339,7 @@
             } catch (err) { console.error("Error loading users:", err); }
         }
 
-       async function loadAllLinks() {
+        async function loadAllLinks() {
             try {
                 const res = await fetch('/api/admin/all-links');
                 const links = await res.json();
@@ -390,11 +418,43 @@
                             <td class="p-3 font-bold text-slate-800">User ID: ${log.user_id}</td>
                             <td class="p-3 text-slate-600 font-semibold">${formattedDate}</td>
                             <td class="p-3 text-slate-800">${log.note || 'Payout / Deduction'}</td>
-                            <td class="p-3 text-center font-extrabold text-rose-600">-₹${Number(log.amount).toFixed(2)}</td>
+                            <td class="p-3 text-center font-extrabold text-rose-600">-₹${Math.abs(Number(log.amount)).toFixed(2)}</td>
                         </tr>`;
                 });
             } catch (err) {
                 console.error("Error loading payout logs:", err);
+            }
+        }
+
+        async function deductUserBalance(e) {
+            e.preventDefault();
+            const userId = document.getElementById('deductUserSelect').value;
+            const amount = document.getElementById('deductAmount').value;
+            const note = document.getElementById('deductNote').value;
+
+            if (!userId || !amount) {
+                alert("Please select a user and enter an amount!");
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/admin/deduct/${userId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount, note })
+                });
+                const result = await res.json();
+                if (res.ok && result.success) {
+                    alert('✅ Amount successfully deducted!');
+                    document.getElementById('deductBalanceForm').reset();
+                    loadAdminPayoutLogs();
+                    loadData();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to deduct'));
+                }
+            } catch (err) {
+                console.error("Deduction error:", err);
+                alert('Server error during deduction');
             }
         }
 
@@ -459,9 +519,7 @@
             try {
                 const response = await fetch('/api/admin/edit-daily-stats', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         link_id: linkId,
                         user_id: userId,
@@ -472,7 +530,6 @@
                 });
 
                 const result = await response.json();
-
                 if (result.success) {
                     alert("Stats updated successfully for " + statDate);
                     loadData();

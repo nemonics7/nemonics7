@@ -152,9 +152,12 @@ app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
 });
 
 // Deduct Balance / Installs from a User and update links
+// FIXED: Changed payload check to accept either 'amount' or 'amount_deducted'
 app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
     const userId = req.params.userId;
-    const { amount_deducted, note } = req.body;
+    // Handle both possible payload keys from frontend
+    const amount_deducted = req.body.amount_deducted || req.body.amount;
+    const note = req.body.note;
     
     try {
         const numAmount = parseFloat(amount_deducted) || 0;
@@ -525,7 +528,7 @@ app.post('/api/admin/edit-daily-stats', isAdmin, async (req, res) => {
 
             allStats.forEach(s => {
                 totalLinkClicks += (s.clicks || 0);
-                totalLinkInstalls += (s.instils || 0);
+                totalLinkInstalls += (s.installs || 0); // Typo 'instils' was fixed here too
             });
 
             await supabase

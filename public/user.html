@@ -268,9 +268,30 @@
                     <span id="deductionMsgText">Ab tak aapke total ₹0.00 minus / paid kiye ja chuke hain.</span>
                 </div>
 
+                <!-- Payout & Deduction History Table (NEW) -->
+                <div class="space-y-4 pt-4">
+                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Payout & Deduction History</h3>
+                    <div class="overflow-x-auto border border-slate-200 rounded-2xl">
+                        <table class="w-full text-left text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-400 uppercase text-[11px] tracking-wider">
+                                    <th class="p-4">Date</th>
+                                    <th class="p-4">Note / Description</th>
+                                    <th class="p-4 text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userPayoutLogsTableBody" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="3" class="text-center p-6 text-slate-400">Loading history...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-sm text-slate-600 space-y-2">
                     <p class="font-bold text-slate-700">💡 Payout & Deduction Info:</p>
-                    <p>Your total earnings are dynamically accumulated from all your active links based on successful installs. The admin can deduct/pay out cleared amounts, which are updated here instantly.</p>
+                    <p>Your total earnings are dynamically accumulated from all your active links based on successful installs. The admin can deduct/pay out cleared amounts, which are updated here instantly without affecting your installs[cite: 4].</p>
                 </div>
             </div>
 
@@ -286,7 +307,11 @@
         window.onload = async function() {
             await loadUserProfile();
             await loadUserLinks();
-            setInterval(loadUserLinks, 30000);
+            await loadUserPayoutLogs();
+            setInterval(() => {
+                loadUserLinks();
+                loadUserPayoutLogs();
+            }, 30000);
         };
 
         function toggleSidebarDrawer() {
@@ -314,6 +339,47 @@
                 }
             } catch (err) {
                 console.error("Error loading user profile:", err);
+            }
+        }
+
+        async function loadUserPayoutLogs() {
+            try {
+                const res = await fetch('/api/user/payout-logs');
+                const logs = await res.json();
+                const tbody = document.getElementById('userPayoutLogsTableBody');
+                
+                if (!tbody) return;
+                tbody.innerHTML = '';
+
+                if (!logs || logs.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="3" class="text-center p-6 text-slate-400">No payouts or deductions recorded yet.</td></tr>`;
+                    return;
+                }
+
+                let calculatedTotalPaid = 0;
+
+                logs.forEach(log => {
+                    const amount = Number(log.amount || 0);
+                    calculatedTotalPaid += Math.abs(amount);
+                    const isNegative = amount < 0;
+                    const dateStr = log.created_at ? new Date(log.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'N/A';
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="p-4 text-xs font-semibold text-slate-500">${dateStr}</td>
+                            <td class="p-4 font-bold text-slate-800">${log.note || 'Adjustment'}</td>
+                            <td class="p-4 text-right font-extrabold ${isNegative ? 'text-rose-600' : 'text-emerald-600'}">
+                                ${isNegative ? '-' : '+'}₹${Math.abs(amount).toFixed(2)}
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                // Update total paid state dynamically from logs
+                currentUserTotalPaid = calculatedTotalPaid;
+                updateDashboardView();
+            } catch (err) {
+                console.error("Error loading payout logs:", err);
             }
         }
 
@@ -368,10 +434,6 @@
                 
                 if (data && Array.isArray(data.links)) {
                     rawUserLinks = data.links;
-                    if(data.user) {
-                        currentUserTotalPaid = Number(data.user.deductions || data.user.total_paid || 0);
-                    }
-                    // Pass BOTH stats (for filtered analytics) and payoutStats (for lifetime earnings/payouts)
                     updateDashboardStatsFromServer(data.stats, data.payoutStats);
                 } else if (Array.isArray(data)) {
                     rawUserLinks = data;
@@ -390,14 +452,12 @@
             }
         }
 
-        // Updated function to split Date-Filtered Stats vs All-Time Payout Stats
         function updateDashboardStatsFromServer(stats, payoutStats) {
             if (!stats) {
                 updateDashboardView();
                 return;
             }
 
-            // 1. ANALYTICS SECTION CARDS (Changes with Date / Calendar filter)
             const totalClicks = stats.totalClicks || 0;
             const totalInstalls = stats.totalInstalls || 0;
             const totalEarnings = stats.totalEarnings || 0;
@@ -408,7 +468,6 @@
             document.getElementById('statTotalEarnings').textContent = `₹${totalEarnings.toFixed(2)}`;
             document.getElementById('statAvgCr').textContent = `${overallCr}%`;
 
-            // 2. PAYOUT / EARNINGS SECTION CARDS (Always Lifetime / All-Time, unaffected by calendar filter)
             let allTimeGrossEarnings = 0;
             if (payoutStats) {
                 allTimeGrossEarnings = payoutStats.totalEarnings || 0;
@@ -462,6 +521,7 @@
 
         function renderBreakdownTable(links) {
             const tbody2 = document.getElementById('calendarTableBody');
+            if(!tbody2) return;
             tbody2.innerHTML = '';
             
             if (!links || links.length === 0) {
@@ -486,6 +546,7 @@
 
         function renderLinksTable(links) {
             const tbody = document.getElementById('userLinksTableBody');
+            if(!tbody) return;
             tbody.innerHTML = '';
             const baseUrl = window.location.origin;
 

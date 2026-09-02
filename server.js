@@ -125,20 +125,48 @@ app.post('/api/admin/set-rate', isAdmin, async (req, res) => {
     }
 });
 
-// Process Custom Payout / Reset or Adjust Installs
+// Process Custom Payout / Reset or Adjust Installs with Log Entry
 app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
     const userId = req.params.userId;
-    const { amount_paid } = req.body;
+    const { amount_paid, note } = req.body;
     try {
+        // Reset user installs or process payout balance
         const { error } = await supabase
             .from('users')
             .update({ total_installs: 0 }) 
             .eq('id', userId);
 
         if (error) return res.status(500).json({ error: error.message });
+
+        // Save entry in payout logs table if table exists
+        await supabase.from('payout_logs').insert([{
+            user_id: parseInt(userId),
+            amount: parseFloat(amount_paid) || 0,
+            note: note || 'Payout Processed'
+        }]).select();
+
         res.json({ success: true, message: 'Payment recorded and balance updated' });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// --- ADMIN PAYOUT LOGS API ROUTE ---
+app.get('/api/admin/payout-logs', isAdmin, async (req, res) => {
+    try {
+        const { data: logs, error } = await supabase
+            .from('payout_logs')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            // If table doesn't exist yet, return empty array gracefully
+            return res.json([]);
+        }
+
+        res.json(logs || []);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error while fetching payout logs' });
     }
 });
 
@@ -189,7 +217,7 @@ app.post('/api/admin/assign-links', isAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// --- UPDATED ADMIN ALL-LINKS API (FIXED 0 CLICKS/INSTALLS ISSUE) ---
+// --- ADMIN ALL-LINKS API ---
 app.get('/api/admin/all-links', isAdmin, async (req, res) => {
     try {
         const { data: links, error: linkError } = await supabase.from('links').select('*').order('created_at', { ascending: false });
@@ -201,7 +229,6 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
         const userMap = {};
         if (users) users.forEach(u => { userMap[u.id] = u.username; });
 
-        // Fetch all daily_stats to accurately aggregate total lifetime clicks & installs per link
         const { data: allDailyStats } = await supabase.from('daily_stats').select('link_id, clicks, installs');
         const totalsMap = {};
         if (allDailyStats) {
@@ -214,7 +241,6 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
             });
         }
 
-        // Fetch today's stats using IST date
         const todayStr = getTodayIST();
         const { data: dailyStats } = await supabase.from('daily_stats').select('*').eq('stat_date', todayStr);
         const dailyMap = {};
@@ -259,7 +285,7 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     }
 });
 
-// --- USER LINKS API WITH DATE RANGE FILTER (ALL TIME REMOVED) ---
+// --- USER LINKS API WITH DATE RANGE FILTER ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     let { startDate, endDate } = req.query;
@@ -367,7 +393,7 @@ app.get('/s/:shortCode', async (req, res) => {
                 .update({ clicks: (existingDaily.clicks || 0) + 1 })
                 .eq('id', existingDaily.id);
         } else {
-            const { error: insErr } = await supabase
+            await supabase
                 .from('daily_stats')
                 .insert([{
                     link_id: link.id,
@@ -376,22 +402,6 @@ app.get('/s/:shortCode', async (req, res) => {
                     installs: 0,
                     stat_date: todayStr
                 }]);
-
-            if (insErr) {
-                const { data: retryDaily } = await supabase
-                    .from('daily_stats')
-                    .select('id, clicks')
-                    .eq('link_id', link.id)
-                    .eq('stat_date', todayStr)
-                    .maybeSingle();
-
-                if (retryDaily) {
-                    await supabase
-                        .from('daily_stats')
-                        .update({ clicks: (retryDaily.clicks || 0) + 1 })
-                        .eq('id', retryDaily.id);
-                }
-            }
         }
 
         return res.redirect(targetUrl);
@@ -401,7 +411,7 @@ app.get('/s/:shortCode', async (req, res) => {
     }
 });
 
-// --- ADMIN EDIT / UPSERT DAILY STATS WITH AUTO-SYNC TO LINKS TABLE ---
+// --- ADMIN EDIT / UPSERT DAILY STATS ---
 app.post('/api/admin/edit-daily-stats', isAdmin, async (req, res) => {
     const { link_id, user_id, stat_date, clicks, installs } = req.body;
 
@@ -421,14 +431,12 @@ app.post('/api/admin/edit-daily-stats', isAdmin, async (req, res) => {
             .maybeSingle();
 
         if (existing) {
-            const { error: updateErr } = await supabase
+            await supabase
                 .from('daily_stats')
                 .update({ clicks: newClicks, installs: newInstalls })
                 .eq('id', existing.id);
-
-            if (updateErr) return res.status(500).json({ error: updateErr.message });
         } else {
-            const { error: insertErr } = await supabase
+            await supabase
                 .from('daily_stats')
                 .insert([{
                     link_id: parseInt(link_id),
@@ -437,8 +445,6 @@ app.post('/api/admin/edit-daily-stats', isAdmin, async (req, res) => {
                     clicks: newClicks,
                     installs: newInstalls
                 }]);
-
-            if (insertErr) return res.status(500).json({ error: insertErr.message });
         }
 
         const { data: allStats, error: sumErr } = await supabase

@@ -310,7 +310,7 @@
                     if(mobEl) mobEl.textContent = welcomeTextVal;
 
                     userRatePerInstall = Number(user.rate_per_install || 0);
-                    currentUserTotalPaid = Number(user.total_paid || 0);
+                    currentUserTotalPaid = Number(user.deductions || user.total_paid || 0);
                 }
             } catch (err) {
                 console.error("Error loading user profile:", err);
@@ -368,8 +368,8 @@
                 
                 if (data && Array.isArray(data.links)) {
                     rawUserLinks = data.links;
-                    if(data.user && data.user.total_paid !== undefined) {
-                        currentUserTotalPaid = Number(data.user.total_paid || 0);
+                    if(data.user) {
+                        currentUserTotalPaid = Number(data.user.deductions || data.user.total_paid || 0);
                     }
                     updateDashboardStatsFromServer(data.stats);
                 } else if (Array.isArray(data)) {
@@ -417,7 +417,6 @@
             document.getElementById('earningsPaidDisplay').textContent = `₹${currentUserTotalPaid.toFixed(2)}`;
             document.getElementById('earningsNetDisplay').textContent = `₹${netBalance > 0 ? netBalance.toFixed(2) : '0.00'}`;
             
-            // Update message text dynamically
             document.getElementById('deductionMsgText').textContent = `Ab tak aapke total ₹${currentUserTotalPaid.toFixed(2)} minus / paid kiye ja chuke hain.`;
         }
 
@@ -450,7 +449,6 @@
             document.getElementById('earningsPaidDisplay').textContent = `₹${currentUserTotalPaid.toFixed(2)}`;
             document.getElementById('earningsNetDisplay').textContent = `₹${netBalance > 0 ? netBalance.toFixed(2) : '0.00'}`;
             
-            // Update message text dynamically
             document.getElementById('deductionMsgText').textContent = `Ab tak aapke total ₹${currentUserTotalPaid.toFixed(2)} minus / paid kiye ja chuke hain.`;
         }
 

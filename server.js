@@ -151,12 +151,18 @@ app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
     }
 });
 
-// --- NEW: Deduct Balance / Installs Route ---
+// Deduct Balance / Installs from a User and update links
 app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
     const userId = req.params.userId;
     const { amount_deducted, note } = req.body;
     
     try {
+        const numAmount = parseFloat(amount_deducted) || 0;
+        if (numAmount <= 0) {
+            return res.status(400).json({ error: 'Invalid deduction amount' });
+        }
+
+        // 1. Fetch user details to get their rate per install
         const { data: user, error: userErr } = await supabase
             .from('users')
             .select('*')
@@ -167,14 +173,45 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Save entry with negative amount in payout logs to indicate deduction
+        const userRate = parseFloat(user.rate_per_install) || 1; 
+        // Calculate kitne installs minus karne hain amount ke base par
+        const installsToDeduct = Math.round(numAmount / userRate);
+
+        // 2. Fetch user's links to reduce installs from them
+        const { data: links, error: linkErr } = await supabase
+            .from('links')
+            .select('*')
+            .eq('user_id', userId);
+
+        if (!linkErr && links && links.length > 0) {
+            let remainingToDeduct = installsToDeduct;
+            
+            // Links me se installs minus karo
+            for (let link of links) {
+                if (remainingToDeduct <= 0) break;
+                const currentInstalls = link.installs || 0;
+                const deductFromThis = Math.min(currentInstalls, remainingToDeduct);
+                
+                if (deductFromThis > 0) {
+                    const newInstalls = currentInstalls - deductFromThis;
+                    await supabase
+                        .from('links')
+                        .update({ installs: newInstalls })
+                        .eq('id', link.id);
+                    
+                    remainingToDeduct -= deductFromThis;
+                }
+            }
+        }
+
+        // 3. Save entry with negative amount in payout logs
         await supabase.from('payout_logs').insert([{
             user_id: parseInt(userId),
-            amount: -Math.abs(parseFloat(amount_deducted) || 0),
-            note: note ? `Deduction: ${note}` : 'Amount/Balance Deducted'
-        }]).select();
+            amount: -Math.abs(numAmount),
+            note: note ? `Deduction: ${note}` : 'Amount Deducted'
+        }]);
 
-        res.json({ success: true, message: 'Deduction recorded successfully' });
+        res.json({ success: true, message: 'Amount successfully deducted and balance updated!' });
     } catch (err) {
         console.error("Deduction error:", err);
         res.status(500).json({ error: 'Server error while processing deduction' });

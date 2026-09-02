@@ -349,7 +349,7 @@ async function loadAllLinks() {
             console.error("Could not fetch logs for deduction calculation", e);
         }
 
-        // 2. Fetch links data
+        // 2. Fetch links data from backend
         const res = await fetch('/api/admin/all-links');
         const links = await res.json();
         const tbody = document.getElementById('adminLinksTableBody');
@@ -360,7 +360,7 @@ async function loadAllLinks() {
         let totalInstallsCount = 0;
         let grossEarningsSum = 0;
 
-        // Aaj ki date YYYY-MM-DD format mein nikalna (Local date)
+        // Aaj ki date YYYY-MM-DD format mein nikalna
         const todayStr = new Date().toISOString().split('T')[0];
 
         if (links && links.length > 0) {
@@ -374,7 +374,7 @@ async function loadAllLinks() {
                 totalInstallsCount += totalInstalls;
                 grossEarningsSum += (totalInstalls * rate);
 
-                // Aaj ke din ka data nikalna daily_stats se
+                // Check karein ki daily_stats array available hai ya nahi
                 let todayClicks = 0;
                 let todayInstalls = 0;
                 if (link.daily_stats && Array.isArray(link.daily_stats)) {
@@ -404,7 +404,6 @@ async function loadAllLinks() {
                                 <div class="flex flex-col gap-1.5 items-center">
                                     <input type="date" id="statDate_${link.id}" value="${todayStr}" class="bg-white border border-slate-200 rounded p-1 text-[10px] font-bold">
                                     <div class="flex gap-1">
-                                        <!-- Yahan value pre-fill kar di gayi hai taaki data direct dikhe -->
                                         <input type="number" id="clicksInput_${link.id}" value="${todayClicks}" placeholder="Clicks" class="w-14 bg-white border border-slate-200 text-center rounded p-1 text-[10px]">
                                         <input type="number" id="installsInput_${link.id}" value="${todayInstalls}" placeholder="Installs" class="w-14 bg-white border border-slate-200 text-center rounded p-1 text-[10px]">
                                     </div>
@@ -416,7 +415,7 @@ async function loadAllLinks() {
                             <td class="p-3 text-center">
                                 <div class="flex items-center justify-center gap-1">
                                     <button onclick="updateLinkRate(${link.id})" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] px-2 py-1 rounded-lg font-bold shadow-sm">Rate</button>
-                                    <button onclick="deletelink(${link.id})" class="bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white text-[10px] px-2 py-1 rounded-lg font-bold">🗑️</button>
+                                    <button onclick="deleteLink(${link.id})" class="bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white text-[10px] px-2 py-1 rounded-lg font-bold">🗑️</button>
                                 </div>
                             </td>
                         </tr>`;
@@ -432,7 +431,9 @@ async function loadAllLinks() {
         document.getElementById('statTotalClicks').innerText = totalClicksCount.toLocaleString();
         document.getElementById('statTotalInstalls').innerText = totalInstallsCount.toLocaleString();
         document.getElementById('statTotalEarnings').innerText = '₹' + netEarningsFinal.toFixed(2);
-    } catch (err) { console.error("Error loading links:", err); }
+    } catch (err) { 
+        console.error("Error loading links:", err); 
+    }
 }
 
         async function loadAdminPayoutLogs() {

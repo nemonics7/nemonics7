@@ -407,17 +407,21 @@
 
         async function loadUserLinks() {
             try {
-                // 1. Fetch all-time data for lifetime earnings / payout section
+                // 1. Fetch all-time data for lifetime earnings & active links list
                 const allTimeRes = await fetch('/api/user/links');
                 const allTimeData = await allTimeRes.json();
+                
                 if (allTimeData && Array.isArray(allTimeData.links)) {
                     allTimeUserLinks = allTimeData.links;
                 } else if (Array.isArray(allTimeData)) {
                     allTimeUserLinks = allTimeData;
+                } else if (allTimeData && Array.isArray(allTimeData.data)) {
+                    allTimeUserLinks = allTimeData.data;
                 } else {
                     allTimeUserLinks = [];
                 }
                 updateEarningsAndPayoutSection();
+                renderLinksTable(allTimeUserLinks);
 
                 // 2. Fetch filtered data for analytics section
                 let url = '/api/user/links';
@@ -460,7 +464,6 @@
                     updateAnalyticsStatsFromLocal();
                 }
 
-                renderLinksTable(allTimeUserLinks);
                 renderBreakdownTable(rawUserLinks);
             } catch (err) {
                 console.error("Error loading user links:", err);
@@ -470,43 +473,17 @@
         }
 
         function updateAnalyticsStats(stats) {
-            if (!stats || (stats.totalClicks === 0 && stats.totalInstalls === 0 && stats.totalEarnings === 0 && rawUserLinks.length > 0)) {
-                updateAnalyticsStatsFromLocal();
-                return;
-            }
-
-            const totalClicks = Number(stats.totalClicks || 0);
-            const totalInstalls = Number(stats.totalInstalls || 0);
-            
-            // Manual calculation override to ensure correct rate mapping if backend returns 0 earnings
-            let totalEarnings = Number(stats.totalEarnings || 0);
-            if (totalEarnings === 0 && totalInstalls > 0) {
-                rawUserLinks.forEach(link => {
-                    const installs = Number(link.installs || 0);
-                    const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
-                    totalEarnings += installs * linkRate;
-                });
-            }
-
-            const overallCr = totalClicks > 0 ? ((totalInstalls / totalClicks) * 100).toFixed(1) : 0;
-
-            document.getElementById('statTotalClicks').textContent = totalClicks.toLocaleString();
-            document.getElementById('statTotalInstalls').textContent = totalInstalls.toLocaleString();
-            document.getElementById('statTotalEarnings').textContent = `₹${totalEarnings.toFixed(2)}`;
-            document.getElementById('statAvgCr').textContent = `${overallCr}%`;
-        }
-
-        function updateAnalyticsStatsFromLocal() {
             let totalClicks = 0;
             let totalInstalls = 0;
             let totalEarnings = 0;
 
+            // Recalculate precisely using rawUserLinks and rate_per_install to avoid backend 0/mismatch bugs
             rawUserLinks.forEach(link => {
                 const clicks = Number(link.clicks || 0);
                 const installs = Number(link.installs || 0);
                 totalClicks += clicks;
                 totalInstalls += installs;
-                
+
                 const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
                 totalEarnings += installs * linkRate;
             });
@@ -517,6 +494,10 @@
             document.getElementById('statTotalInstalls').textContent = totalInstalls.toLocaleString();
             document.getElementById('statTotalEarnings').textContent = `₹${totalEarnings.toFixed(2)}`;
             document.getElementById('statAvgCr').textContent = `${overallCr}%`;
+        }
+
+        function updateAnalyticsStatsFromLocal() {
+            updateAnalyticsStats(null);
         }
 
         function updateEarningsAndPayoutSection() {

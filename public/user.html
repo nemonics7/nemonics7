@@ -303,12 +303,13 @@
         let allTimeUserLinks = [];
         let userRatePerInstall = 0;
         let currentUserTotalPaid = 0;
+        let cachedAllTimeEarnings = 0;
         let currentFilterMode = 'today'; 
 
         window.onload = async function() {
             await loadUserProfile();
-            await loadUserLinks();
             await loadUserPayoutLogs();
+            await loadUserLinks();
             setInterval(() => {
                 loadUserLinks();
                 loadUserPayoutLogs();
@@ -411,6 +412,11 @@
                 const allTimeRes = await fetch('/api/user/links');
                 const allTimeData = await allTimeRes.json();
                 
+                let globalAllTimeEarnings = 0;
+                if (allTimeData && allTimeData.payoutStats && typeof allTimeData.payoutStats.totalEarnings !== 'undefined') {
+                    globalAllTimeEarnings = Number(allTimeData.payoutStats.totalEarnings || 0);
+                }
+
                 if (allTimeData && Array.isArray(allTimeData.links)) {
                     allTimeUserLinks = allTimeData.links;
                 } else if (Array.isArray(allTimeData)) {
@@ -420,6 +426,17 @@
                 } else {
                     allTimeUserLinks = [];
                 }
+
+                // Fallback computation if payoutStats totalEarnings wasn't directly given
+                if (globalAllTimeEarnings === 0 && allTimeUserLinks.length > 0) {
+                    allTimeUserLinks.forEach(link => {
+                        const installs = Number(link.installs || 0);
+                        const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
+                        globalAllTimeEarnings += installs * linkRate;
+                    });
+                }
+
+                cachedAllTimeEarnings = globalAllTimeEarnings;
                 updateEarningsAndPayoutSection();
                 renderLinksTable(allTimeUserLinks);
 
@@ -477,7 +494,6 @@
             let totalInstalls = 0;
             let totalEarnings = 0;
 
-            // Recalculate precisely using rawUserLinks and rate_per_install to avoid backend 0/mismatch bugs
             rawUserLinks.forEach(link => {
                 const clicks = Number(link.clicks || 0);
                 const installs = Number(link.installs || 0);
@@ -501,13 +517,15 @@
         }
 
         function updateEarningsAndPayoutSection() {
-            let allTimeGrossEarnings = 0;
+            let allTimeGrossEarnings = cachedAllTimeEarnings || 0;
 
-            allTimeUserLinks.forEach(link => {
-                const installs = Number(link.installs || 0);
-                const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
-                allTimeGrossEarnings += installs * linkRate;
-            });
+            if (allTimeGrossEarnings === 0 && allTimeUserLinks && allTimeUserLinks.length > 0) {
+                allTimeUserLinks.forEach(link => {
+                    const installs = Number(link.installs || 0);
+                    const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
+                    allTimeGrossEarnings += installs * linkRate;
+                });
+            }
 
             const netBalance = allTimeGrossEarnings - currentUserTotalPaid;
 

@@ -7,12 +7,12 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Supabase Setup[cite: 4]
+// Supabase Setup
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Middleware[cite: 4]
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -25,19 +25,19 @@ app.use(session({
     saveUninitialized: false
 }));
 
-// Helper function for IST Date (YYYY-MM-DD)[cite: 4]
+// Helper function for IST Date (YYYY-MM-DD)
 function getTodayIST() {
     return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 }
 
-// Authentication Middleware[cite: 4]
+// Authentication Middleware
 function isAuthenticated(req, res, next) {
-    if (req.session.user) return next();
+    if (req.session && req.session.user) return next();
     res.status(401).json({ error: 'Unauthorized' });
 }
 
 function isAdmin(req, res, next) {
-    if (req.session.user && req.session.user.role === 'admin') return next();
+    if (req.session && req.session.user && req.session.user.role === 'admin') return next();
     res.status(403).json({ error: 'Forbidden' });
 }
 
@@ -90,7 +90,6 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
         const { data: links } = await supabase.from('links').select('id, user_id, installs, rate_per_install');
         const { data: allDailyStats } = await supabase.from('daily_stats').select('link_id, installs');
         
-        // Fetch total deductions per user to subtract from total earnings[cite: 4]
         const { data: allLogs } = await supabase.from('payout_logs').select('user_id, amount');
         const userDeductionsMap = {};
         if (allLogs) {
@@ -129,7 +128,6 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
             });
         }
 
-        // Subtract deductions from total earnings
         Object.keys(userMap).forEach(uid => {
             const deductions = userDeductionsMap[uid] || 0;
             userMap[uid].total_earnings = Math.max(0, userMap[uid].total_earnings - deductions);
@@ -143,7 +141,6 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
     }
 });
 
-// Update User Rate per install[cite: 4]
 app.post('/api/admin/set-rate', isAdmin, async (req, res) => {
     const { userId, rate } = req.body;
     try {
@@ -159,7 +156,6 @@ app.post('/api/admin/set-rate', isAdmin, async (req, res) => {
     }
 });
 
-// Process Custom Payout / Reset or Adjust Installs with Log Entry[cite: 4]
 app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
     const userId = req.params.userId;
     const { amount_paid, note } = req.body;
@@ -183,7 +179,6 @@ app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
     }
 });
 
-// --- UPDATED DEDUCT ROUTE: DOES NOT TOUCH INSTALLS, ONLY LOGS & DEDUCTS AMOUNT ---
 app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
     const userId = req.params.userId;
     const amount_deducted = req.body.amount_deducted || req.body.amount || req.body.deduction;
@@ -205,7 +200,6 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Only insert into payout_logs. Installs are intentionally untouched[cite: 4].
         const { error: logErr } = await supabase.from('payout_logs').insert([{
             user_id: parseInt(userId),
             amount: -Math.abs(numAmount),
@@ -213,18 +207,15 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
         }]);
 
         if (logErr) {
-            console.error("Payout log insert warning:", logErr.message);
             return res.status(500).json({ error: logErr.message });
         }
 
-        res.json({ success: true, message: 'Amount successfully deducted and logged without altering installs!' });
+        res.json({ success: true, message: 'Amount successfully deducted and logged!' });
     } catch (err) {
-        console.error("Deduction error:", err);
         res.status(500).json({ error: 'Server error while processing deduction' });
     }
 });
 
-// --- ADMIN PAYOUT LOGS API ROUTE ---[cite: 4]
 app.get('/api/admin/payout-logs', isAdmin, async (req, res) => {
     try {
         const { data: logs, error } = await supabase
@@ -232,17 +223,13 @@ app.get('/api/admin/payout-logs', isAdmin, async (req, res) => {
             .select('*')
             .order('created_at', { ascending: false });
 
-        if (error) {
-            return res.json([]);
-        }
-
+        if (error) return res.json([]);
         res.json(logs || []);
     } catch (err) {
-        res.status(500).json({ error: 'Server error while fetching payout logs' });
+        res.status(500).json({ error: 'Server error' });
     }
 });
 
-// --- USER PAYOUT / DEDUCTION LOGS API ROUTE (NEW) ---
 app.get('/api/user/payout-logs', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     try {
@@ -252,13 +239,10 @@ app.get('/api/user/payout-logs', isAuthenticated, async (req, res) => {
             .eq('user_id', userId)
             .order('created_at', { ascending: false });
 
-        if (error) {
-            return res.json([]);
-        }
-
+        if (error) return res.json([]);
         res.json(logs || []);
     } catch (err) {
-        res.status(500).json({ error: 'Server error while fetching user payout logs' });
+        res.status(500).json({ error: 'Server error' });
     }
 });
 
@@ -309,7 +293,6 @@ app.post('/api/admin/assign-links', isAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// --- ADMIN ALL-LINKS API ---[cite: 4]
 app.get('/api/admin/all-links', isAdmin, async (req, res) => {
     try {
         const { data: links, error: linkError } = await supabase.from('links').select('*').order('created_at', { ascending: false });
@@ -365,7 +348,6 @@ app.post('/api/admin/adjust-stats', isAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
-// Delete Link API Route[cite: 4]
 app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     const { link_id } = req.body;
     try {
@@ -377,7 +359,7 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     }
 });
 
-// --- USER LINKS API WITH DEDUCTIONS SUBTRACTION ---
+// --- USER LINKS API: PURE ANALYTICS (NO DEDUCTION SUBTRACTION IN STATS) ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     let { startDate, endDate } = req.query;
@@ -390,7 +372,6 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
             .order('created_at', { ascending: false });
 
         if (error) {
-            console.error("Links fetch error:", error);
             return res.status(500).json({ error: error.message });
         }
 
@@ -404,7 +385,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
             .select('*')
             .eq('user_id', userId);
 
-        let allTimeClicks = 0, allTimeInstalls = 0, allTimeEarnings = 0;
+        let allTimeClicks = 0, allTimeInstalls = 0, allTimeGrossEarnings = 0;
         if (allTimeStats) {
             allTimeStats.forEach(d => {
                 const c = d.clicks || 0;
@@ -412,24 +393,9 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
                 const rate = linkRateMap[d.link_id] || 0;
                 allTimeClicks += c;
                 allTimeInstalls += i;
-                allTimeEarnings += (i * rate);
+                allTimeGrossEarnings += (i * rate);
             });
         }
-
-        // Fetch user deductions to subtract from user dashboard earnings[cite: 4]
-        const { data: userLogs } = await supabase
-            .from('payout_logs')
-            .select('amount')
-            .eq('user_id', userId);
-
-        let totalDeductions = 0;
-        if (userLogs) {
-            userLogs.forEach(l => {
-                totalDeductions += Math.abs(Number(l.amount) || 0);
-            });
-        }
-
-        allTimeEarnings = Math.max(0, allTimeEarnings - totalDeductions);
 
         let filteredClicks = 0, filteredInstalls = 0, filteredEarnings = 0;
         let filteredLinks = links;
@@ -472,11 +438,10 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
                 filteredInstalls += i;
                 filteredEarnings += (i * rate);
             });
-            filteredEarnings = Math.max(0, filteredEarnings - totalDeductions);
         } else {
             filteredClicks = allTimeClicks;
             filteredInstalls = allTimeInstalls;
-            filteredEarnings = allTimeEarnings;
+            filteredEarnings = allTimeGrossEarnings;
         }
 
         res.json({ 
@@ -489,7 +454,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
             payoutStats: { 
                 totalClicks: allTimeClicks, 
                 totalInstalls: allTimeInstalls, 
-                totalEarnings: allTimeEarnings 
+                totalEarnings: allTimeGrossEarnings 
             }
         });
     } catch (err) { 
@@ -498,7 +463,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
     }
 });
 
-// --- SHORT URL REDIRECT ROUTE ---[cite: 4]
+// --- SHORT URL REDIRECT ROUTE ---
 app.get('/s/:shortCode', async (req, res) => {
     try {
         const shortCode = req.params.shortCode;
@@ -547,12 +512,10 @@ app.get('/s/:shortCode', async (req, res) => {
 
         return res.redirect(targetUrl);
     } catch (err) {
-        console.error("Redirect error:", err);
         res.status(500).send('Server Error');
     }
 });
 
-// --- ADMIN EDIT / UPSERT DAILY STATS ---[cite: 4]
 app.post('/api/admin/edit-daily-stats', isAdmin, async (req, res) => {
     const { link_id, user_id, stat_date, clicks, installs } = req.body;
 
@@ -611,10 +574,9 @@ app.post('/api/admin/edit-daily-stats', isAdmin, async (req, res) => {
                 .eq('id', link_id);
         }
 
-        res.json({ success: true, message: 'Daily stats updated and lifetime totals synced successfully!' });
+        res.json({ success: true, message: 'Daily stats updated successfully!' });
     } catch (err) {
-        console.error("Edit daily stats error:", err);
-        res.status(500).json({ error: 'Server error while editing stats' });
+        res.status(500).json({ error: 'Server error' });
     }
 });
 

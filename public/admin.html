@@ -319,8 +319,13 @@
                     users.forEach(u => {
                         if(u.role !== 'admin') {
                             totalUsersCount++;
+                            const netBalance = Number(u.total_earnings || 0).toFixed(2);
+                            
+                            // 1. Assign Link ke liye sirf normal username (bina balance ke)
                             if(select) select.innerHTML += `<option value="${u.id}">${u.username} (ID: ${u.id})</option>`;
-                            if(deductSelect) deductSelect.innerHTML += `<option value="${u.id}">${u.username} (ID: ${u.id})</option>`;
+                            
+                            // 2. Deduct Balance ke liye username ke sath balance
+                            if(deductSelect) deductSelect.innerHTML += `<option value="${u.id}">${u.username} (Balance: ₹${netBalance})</option>`;
                         }
                     });
                 }

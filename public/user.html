@@ -56,7 +56,6 @@
         <!-- DESKTOP SIDEBAR NAVIGATION -->
         <aside class="w-72 border-r border-slate-200 bg-slate-50/80 backdrop-blur-xl p-6 flex flex-col justify-between hidden md:flex">
             <div class="space-y-8">
-                <!-- Brand / Logo -->
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-600 to-indigo-600 flex items-center justify-center font-extrabold text-lg text-white shadow-lg shadow-cyan-500/30">N</div>
                     <div>
@@ -65,7 +64,6 @@
                     </div>
                 </div>
 
-                <!-- Nav Links -->
                 <nav class="space-y-2">
                     <button onclick="switchUserTab('analytics')" id="utab-analytics" class="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-sm transition-all duration-300 bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-lg shadow-cyan-600/30">
                         <span>📊</span> Analytics & Calendar
@@ -79,7 +77,6 @@
                 </nav>
             </div>
 
-            <!-- Sidebar Footer / Logout -->
             <div class="pt-6 border-t border-slate-200">
                 <button onclick="logout()" class="w-full flex items-center justify-center gap-2 bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-500 hover:text-white py-3 rounded-2xl font-semibold transition-all duration-300 text-sm">
                     🚪 Logout
@@ -90,7 +87,7 @@
         <!-- MAIN CONTENT AREA -->
         <main class="flex-1 p-6 lg:p-10 space-y-6 overflow-y-auto">
             
-            <!-- MOBILE HEADER (Hamburger + Welcome Section + Live Sync) -->
+            <!-- MOBILE HEADER -->
             <header class="flex md:hidden flex-col gap-4 glass-card p-5 rounded-3xl mb-6">
                 <div class="flex justify-between items-center">
                     <div class="flex items-center gap-3">
@@ -128,7 +125,6 @@
             <!-- TAB 1: ANALYTICS & CALENDAR -->
             <div id="usec-analytics" class="space-y-6">
                 
-                <!-- Overall Performance Cards & Quick Filter Header Container -->
                 <div class="glass-card p-6 sm:p-8 rounded-3xl space-y-6 relative z-30">
                     <div class="flex flex-col lg:flex-row justify-between items-center gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 relative">
                         <div>
@@ -136,20 +132,17 @@
                             <p class="text-[11px] text-slate-500 mt-0.5">View performance statistics.</p>
                         </div>
 
-                        <!-- Quick Filter & Custom Date Dropdown Box -->
                         <div class="relative">
                             <button onclick="toggleQuickFilterDropdown()" class="bg-white hover:bg-slate-100 text-xs px-4 py-2.5 rounded-xl font-bold text-slate-700 border border-slate-200 flex items-center gap-3 transition-all shadow-sm">
                                 <span>📅 <span id="selectedFilterLabel">Today</span></span>
                                 <span class="text-slate-400">▾</span>
                             </button>
 
-                            <!-- Dropdown Box -->
                             <div id="quickFilterDropdown" class="hidden absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 z-50 space-y-1">
                                 <button onclick="selectQuickFilter('today', 'Today')" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-cyan-600 rounded-xl transition-all">Today</button>
                                 <button onclick="selectQuickFilter('yesterday', 'Yesterday')" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-cyan-600 rounded-xl transition-all">Yesterday</button>
                                 <button onclick="selectQuickFilter('7days', 'Last 7 Days')" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-cyan-600 rounded-xl transition-all">Last 7 Days</button>
                                 
-                                <!-- Custom Range Option -->
                                 <div class="border-t border-slate-100 pt-1 mt-1">
                                     <div onclick="openCustomRangePicker()" class="w-full text-left px-3 py-2 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all cursor-pointer flex items-center justify-between">
                                         <span>Custom Range</span>
@@ -160,7 +153,6 @@
                         </div>
                     </div>
 
-                    <!-- Custom Range Input Modal/Box -->
                     <div id="customRangeModal" class="hidden p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
@@ -175,9 +167,7 @@
                         <button onclick="applyCustomRange()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2.5 rounded-xl shadow-sm transition-all">Apply Custom Range</button>
                     </div>
 
-                    <!-- Stat Cards Grid -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 pt-2">
-                        <!-- Total Clicks Card -->
                         <div class="p-6 rounded-3xl bg-cyan-50/40 border border-cyan-100 flex items-center justify-between shadow-lg shadow-cyan-500/5">
                             <div>
                                 <p class="text-xs font-bold uppercase tracking-wider text-cyan-800" id="clicksLabelTitle">Today Clicks</p>
@@ -186,7 +176,6 @@
                             <div class="w-12 h-12 rounded-2xl bg-cyan-100 border border-cyan-200 flex items-center justify-center text-xl shadow-sm">🖱️</div>
                         </div>
 
-                        <!-- Total Installs Card -->
                         <div class="p-6 rounded-3xl bg-amber-50/40 border border-amber-100 flex items-center justify-between shadow-lg shadow-amber-500/5">
                             <div>
                                 <p class="text-xs font-bold uppercase tracking-wider text-amber-800" id="installsLabelTitle">Today Installs</p>
@@ -195,7 +184,6 @@
                             <div class="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-200 flex items-center justify-center text-xl shadow-sm">📦</div>
                         </div>
 
-                        <!-- Total Earnings Card -->
                         <div class="p-6 rounded-3xl bg-emerald-50/40 border border-emerald-100 flex items-center justify-between shadow-lg shadow-emerald-500/5">
                             <div>
                                 <p class="text-xs font-bold uppercase tracking-wider text-emerald-800" id="earningsLabelTitle">Today Earnings</p>
@@ -204,7 +192,6 @@
                             <div class="w-12 h-12 rounded-2xl bg-emerald-100 border border-emerald-200 flex items-center justify-center text-xl shadow-sm">💰</div>
                         </div>
 
-                        <!-- Average CR Card -->
                         <div class="p-6 rounded-3xl bg-indigo-50/40 border border-indigo-100 flex items-center justify-between shadow-lg shadow-indigo-500/5">
                             <div>
                                 <p class="text-xs font-bold uppercase tracking-wider text-indigo-800">Conversion Rate</p>
@@ -215,7 +202,6 @@
                     </div>
                 </div>
 
-                <!-- Calendar & Detailed Breakdown Table -->
                 <div class="glass-card p-6 sm:p-8 rounded-3xl space-y-6">
                     <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-4">Link Performance Breakdown</h3>
                     <div class="overflow-x-auto">
@@ -260,19 +246,31 @@
                     <h2 class="text-xl font-bold text-emerald-600">💰 My Earnings & Payout Summary</h2>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                        <p class="text-xs font-bold text-slate-500 uppercase">Total Installs (All-Time)</p>
-                        <h3 id="earningsInstallsDisplay" class="text-3xl font-extrabold text-amber-600">0</h3>
+                <!-- Earnings Breakdown Cards Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 shadow-sm">
+                        <p class="text-xs font-bold text-slate-500 uppercase">Total Links Earnings</p>
+                        <h3 id="earningsTotalDisplay" class="text-2xl font-extrabold text-slate-800">₹0.00</h3>
                     </div>
-                    <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                        <p class="text-xs font-bold text-slate-500 uppercase">Total Income (All-Time)</p>
-                        <h3 id="earningsTotalDisplay" class="text-3xl font-extrabold text-emerald-600">₹0.00</h3>
+                    <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 shadow-sm">
+                        <p class="text-xs font-bold text-slate-500 uppercase">Paid / Deducted</p>
+                        <h3 id="earningsPaidDisplay" class="text-2xl font-extrabold text-rose-600">₹0.00</h3>
+                    </div>
+                    <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 shadow-sm">
+                        <p class="text-xs font-bold text-slate-500 uppercase">Available Net Balance</p>
+                        <h3 id="earningsNetDisplay" class="text-2xl font-extrabold text-emerald-600">₹0.00</h3>
                     </div>
                 </div>
 
-                <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-sm text-slate-600">
-                    <p>💡 Note: Your earnings are calculated dynamically based on your total successful installs multiplied by your assigned rate per install.</p>
+                <!-- Chota sa Message jo minus huye paise highlight karega -->
+                <div id="deductionAlertMsg" class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-semibold flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span id="deductionMsgText">Ab tak aapke total ₹0.00 minus / paid kiye ja chuke hain.</span>
+                </div>
+
+                <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-sm text-slate-600 space-y-2">
+                    <p class="font-bold text-slate-700">💡 Payout & Deduction Info:</p>
+                    <p>Your total earnings are dynamically accumulated from all your active links based on successful installs. The admin can deduct/pay out cleared amounts, which are updated here instantly.</p>
                 </div>
             </div>
 
@@ -282,16 +280,15 @@
     <script>
         let rawUserLinks = [];
         let userRatePerInstall = 0;
+        let currentUserTotalPaid = 0;
         let currentFilterMode = 'today'; 
 
         window.onload = async function() {
             await loadUserProfile();
             await loadUserLinks();
-            
             setInterval(loadUserLinks, 30000);
         };
 
-        // Sidebar Toggle Function for Mobile Hamburger Menu
         function toggleSidebarDrawer() {
             const drawer = document.getElementById('sidebarDrawer');
             const overlay = document.getElementById('sidebarOverlay');
@@ -313,6 +310,7 @@
                     if(mobEl) mobEl.textContent = welcomeTextVal;
 
                     userRatePerInstall = Number(user.rate_per_install || 0);
+                    currentUserTotalPaid = Number(user.total_paid || 0);
                 }
             } catch (err) {
                 console.error("Error loading user profile:", err);
@@ -370,6 +368,9 @@
                 
                 if (data && Array.isArray(data.links)) {
                     rawUserLinks = data.links;
+                    if(data.user && data.user.total_paid !== undefined) {
+                        currentUserTotalPaid = Number(data.user.total_paid || 0);
+                    }
                     updateDashboardStatsFromServer(data.stats);
                 } else if (Array.isArray(data)) {
                     rawUserLinks = data;
@@ -404,24 +405,27 @@
             document.getElementById('statTotalEarnings').textContent = `₹${totalEarnings.toFixed(2)}`;
             document.getElementById('statAvgCr').textContent = `${overallCr}%`;
 
-            let allTimeInstalls = 0;
-            let allTimeEarnings = 0;
+            let allTimeGrossEarnings = 0;
             rawUserLinks.forEach(link => {
                 const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
-                allTimeInstalls += Number(link.installs || 0);
-                allTimeEarnings += Number(link.installs || 0) * linkRate;
+                allTimeGrossEarnings += Number(link.installs || 0) * linkRate;
             });
 
-            document.getElementById('earningsInstallsDisplay').textContent = allTimeInstalls.toLocaleString();
-            document.getElementById('earningsTotalDisplay').textContent = `₹${allTimeEarnings.toFixed(2)}`;
+            const netBalance = allTimeGrossEarnings - currentUserTotalPaid;
+
+            document.getElementById('earningsTotalDisplay').textContent = `₹${allTimeGrossEarnings.toFixed(2)}`;
+            document.getElementById('earningsPaidDisplay').textContent = `₹${currentUserTotalPaid.toFixed(2)}`;
+            document.getElementById('earningsNetDisplay').textContent = `₹${netBalance > 0 ? netBalance.toFixed(2) : '0.00'}`;
+            
+            // Update message text dynamically
+            document.getElementById('deductionMsgText').textContent = `Ab tak aapke total ₹${currentUserTotalPaid.toFixed(2)} minus / paid kiye ja chuke hain.`;
         }
 
         function updateDashboardView() {
             let totalClicks = 0;
             let totalInstalls = 0;
             let totalEarnings = 0;
-            let allTimeInstalls = 0;
-            let allTimeEarnings = 0;
+            let allTimeGrossEarnings = 0;
 
             rawUserLinks.forEach(link => {
                 const clicks = Number(link.clicks || 0);
@@ -431,20 +435,23 @@
                 
                 const linkRate = Number(link.rate_per_install || userRatePerInstall || 0);
                 totalEarnings += installs * linkRate;
-
-                allTimeInstalls += installs;
-                allTimeEarnings += installs * linkRate;
+                allTimeGrossEarnings += installs * linkRate;
             });
 
             const overallCr = totalClicks > 0 ? ((totalInstalls / totalClicks) * 100).toFixed(1) : 0;
+            const netBalance = allTimeGrossEarnings - currentUserTotalPaid;
 
             document.getElementById('statTotalClicks').textContent = totalClicks.toLocaleString();
             document.getElementById('statTotalInstalls').textContent = totalInstalls.toLocaleString();
             document.getElementById('statTotalEarnings').textContent = `₹${totalEarnings.toFixed(2)}`;
             document.getElementById('statAvgCr').textContent = `${overallCr}%`;
 
-            document.getElementById('earningsInstallsDisplay').textContent = allTimeInstalls.toLocaleString();
-            document.getElementById('earningsTotalDisplay').textContent = `₹${allTimeEarnings.toFixed(2)}`;
+            document.getElementById('earningsTotalDisplay').textContent = `₹${allTimeGrossEarnings.toFixed(2)}`;
+            document.getElementById('earningsPaidDisplay').textContent = `₹${currentUserTotalPaid.toFixed(2)}`;
+            document.getElementById('earningsNetDisplay').textContent = `₹${netBalance > 0 ? netBalance.toFixed(2) : '0.00'}`;
+            
+            // Update message text dynamically
+            document.getElementById('deductionMsgText').textContent = `Ab tak aapke total ₹${currentUserTotalPaid.toFixed(2)} minus / paid kiye ja chuke hain.`;
         }
 
         function renderBreakdownTable(links) {

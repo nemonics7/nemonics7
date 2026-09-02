@@ -335,7 +335,6 @@
 
 async function loadAllLinks() {
     try {
-        // 1. Fetch Payout/Deduction logs to calculate total deductions
         let totalDeductions = 0;
         try {
             const logsRes = await fetch('/api/admin/payout-logs');
@@ -346,10 +345,9 @@ async function loadAllLinks() {
                 });
             }
         } catch (e) {
-            console.error("Could not fetch logs for deduction calculation", e);
+            console.error("Could not fetch logs", e);
         }
 
-        // 2. Fetch links data from backend
         const res = await fetch('/api/admin/all-links');
         const links = await res.json();
         const tbody = document.getElementById('adminLinksTableBody');
@@ -360,7 +358,7 @@ async function loadAllLinks() {
         let totalInstallsCount = 0;
         let grossEarningsSum = 0;
 
-        // Aaj ki date YYYY-MM-DD format mein nikalna
+        // Local date format YYYY-MM-DD
         const todayStr = new Date().toISOString().split('T')[0];
 
         if (links && links.length > 0) {
@@ -374,16 +372,9 @@ async function loadAllLinks() {
                 totalInstallsCount += totalInstalls;
                 grossEarningsSum += (totalInstalls * rate);
 
-                // Check karein ki daily_stats array available hai ya nahi
-                let todayClicks = 0;
-                let todayInstalls = 0;
-                if (link.daily_stats && Array.isArray(link.daily_stats)) {
-                    const todayStat = link.daily_stats.find(d => d.stat_date === todayStr);
-                    if (todayStat) {
-                        todayClicks = Number(todayStat.clicks || 0);
-                        todayInstalls = Number(todayStat.installs || 0);
-                    }
-                }
+                // Backend se direct aane wale today_clicks aur today_installs ka use karein
+                const todayClicks = Number(link.today_clicks || 0);
+                const todayInstalls = Number(link.today_installs || 0);
 
                 const cr = totalClicks > 0 ? ((totalInstalls / totalClicks) * 100).toFixed(1) : 0;
                 
@@ -431,9 +422,7 @@ async function loadAllLinks() {
         document.getElementById('statTotalClicks').innerText = totalClicksCount.toLocaleString();
         document.getElementById('statTotalInstalls').innerText = totalInstallsCount.toLocaleString();
         document.getElementById('statTotalEarnings').innerText = '₹' + netEarningsFinal.toFixed(2);
-    } catch (err) { 
-        console.error("Error loading links:", err); 
-    }
+    } catch (err) { console.error("Error loading links:", err); }
 }
 
         async function loadAdminPayoutLogs() {

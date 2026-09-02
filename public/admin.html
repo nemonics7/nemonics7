@@ -134,7 +134,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                             <h4 class="font-bold text-xs text-slate-700">Link Analysis & CR</h4>
-                            <p class="text-[11px] text-slate-500">Modify clicks, install numbers manually, and check conversion rates.</p>
+                            <p class="text-[11px] text-slate-500">Modify today's clicks, installs, and check conversion rates.</p>
                             <button onclick="switchAdminTab('links')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] px-3.5 py-2 rounded-xl font-bold transition-all shadow-md">Go to Links</button>
                         </div>
                         <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
@@ -151,7 +151,7 @@
                 <div class="flex justify-between items-center border-b border-slate-100 pb-4">
                     <div>
                         <h2 class="text-base font-bold text-indigo-600">Link Analysis & CR Control</h2>
-                        <p class="text-[11px] text-slate-500 mt-0.5">Directly manage clicks, installs, rates, and date-wise daily stats.</p>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Directly manage today's clicks, installs, rates, and date-wise daily stats.</p>
                     </div>
                     <button onclick="loadData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-semibold border border-slate-200 transition-all text-[11px]">🔄 Refresh</button>
                 </div>
@@ -161,7 +161,7 @@
                             <tr class="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider">
                                 <th class="p-3">User</th>
                                 <th class="p-3">Link / URL</th>
-                                <th class="p-3 text-center">Total Stats</th>
+                                <th class="p-3 text-center">Today's Stats</th>
                                 <th class="p-3 text-center">Date-Wise Daily Edit</th>
                                 <th class="p-3 text-center">Rate / Install</th>
                                 <th class="p-3 text-center">CR</th>
@@ -360,18 +360,32 @@
                 let totalInstallsCount = 0;
                 let grossEarningsSum = 0;
 
+                // Aaj ki date YYYY-MM-DD format mein nikalna (IST/Local ke hisab se)
+                const todayStr = new Date().toISOString().split('T')[0];
+
                 if (links && links.length > 0) {
                     activeLinksCount = links.length;
                     links.forEach(link => {
-                        const clicks = Number(link.clicks || 0);
-                        const installs = Number(link.installs || 0);
+                        const totalClicks = Number(link.clicks || 0);
+                        const totalInstalls = Number(link.installs || 0);
                         const rate = Number(link.rate_per_install || 0);
                         
-                        totalClicksCount += clicks;
-                        totalInstallsCount += installs;
-                        grossEarningsSum += (installs * rate);
+                        totalClicksCount += totalClicks;
+                        totalInstallsCount += totalInstalls;
+                        grossEarningsSum += (totalInstalls * rate);
 
-                        const cr = clicks > 0 ? ((installs / clicks) * 100).toFixed(1) : 0;
+                        // Agar link ke sath daily_stats array aata hai toh aaj ka data filter karein
+                        let todayClicks = 0;
+                        let todayInstalls = 0;
+                        if (link.daily_stats && Array.isArray(link.daily_stats)) {
+                            const todayStat = link.daily_stats.find(d => d.stat_date === todayStr);
+                            if (todayStat) {
+                                todayClicks = Number(todayStat.clicks || 0);
+                                todayInstalls = Number(todayStat.installs || 0);
+                            }
+                        }
+
+                        const cr = totalClicks > 0 ? ((totalInstalls / totalClicks) * 100).toFixed(1) : 0;
                         
                         if(tbody) {
                             tbody.innerHTML += `
@@ -382,12 +396,13 @@
                                         <a href="${link.target_url}" target="_blank" class="text-[10px] text-cyan-600 hover:underline truncate block max-w-[140px] font-mono">${link.target_url}</a>
                                     </td>
                                     <td class="p-3 text-center">
-                                        <span class="text-[10px] text-slate-500 font-semibold block">Clicks: ${clicks}</span>
-                                        <span class="text-[10px] text-slate-500 font-semibold block">Installs: ${installs}</span>
+                                        <span class="text-[10px] text-slate-600 font-bold block">Clicks: ${todayClicks}</span>
+                                        <span class="text-[10px] text-slate-600 font-bold block">Installs: ${todayInstalls}</span>
+                                        <span class="text-[9px] text-slate-400 block mt-0.5">(${todayStr})</span>
                                     </td>
                                     <td class="p-3 text-center bg-slate-50/50 rounded-xl">
                                         <div class="flex flex-col gap-1.5 items-center">
-                                            <input type="date" id="statDate_${link.id}" class="bg-white border border-slate-200 rounded p-1 text-[10px] font-bold">
+                                            <input type="date" id="statDate_${link.id}" value="${todayStr}" class="bg-white border border-slate-200 rounded p-1 text-[10px] font-bold">
                                             <div class="flex gap-1">
                                                 <input type="number" id="clicksInput_${link.id}" placeholder="Clicks" class="w-14 bg-white border border-slate-200 text-center rounded p-1 text-[10px]">
                                                 <input type="number" id="installsInput_${link.id}" placeholder="Installs" class="w-14 bg-white border border-slate-200 text-center rounded p-1 text-[10px]">

@@ -333,107 +333,107 @@
             } catch (err) { console.error("Error loading users:", err); }
         }
 
-        async function loadAllLinks() {
-            try {
-                // 1. Fetch Payout/Deduction logs to calculate total deductions
-                let totalDeductions = 0;
-                try {
-                    const logsRes = await fetch('/api/admin/payout-logs');
-                    const logs = await logsRes.json();
-                    if (Array.isArray(logs)) {
-                        logs.forEach(log => {
-                            totalDeductions += Math.abs(Number(log.amount) || 0);
-                        });
-                    }
-                } catch (e) {
-                    console.error("Could not fetch logs for deduction calculation", e);
-                }
-
-                // 2. Fetch links data
-                const res = await fetch('/api/admin/all-links');
-                const links = await res.json();
-                const tbody = document.getElementById('adminLinksTableBody');
-                if(tbody) tbody.innerHTML = '';
-
-                let activeLinksCount = 0;
-                let totalClicksCount = 0;
-                let totalInstallsCount = 0;
-                let grossEarningsSum = 0;
-
-                // Aaj ki date YYYY-MM-DD format mein nikalna (IST/Local ke hisab se)
-                const todayStr = new Date().toISOString().split('T')[0];
-
-                if (links && links.length > 0) {
-                    activeLinksCount = links.length;
-                    links.forEach(link => {
-                        const totalClicks = Number(link.clicks || 0);
-                        const totalInstalls = Number(link.installs || 0);
-                        const rate = Number(link.rate_per_install || 0);
-                        
-                        totalClicksCount += totalClicks;
-                        totalInstallsCount += totalInstalls;
-                        grossEarningsSum += (totalInstalls * rate);
-
-                        // Agar link ke sath daily_stats array aata hai toh aaj ka data filter karein
-                        let todayClicks = 0;
-                        let todayInstalls = 0;
-                        if (link.daily_stats && Array.isArray(link.daily_stats)) {
-                            const todayStat = link.daily_stats.find(d => d.stat_date === todayStr);
-                            if (todayStat) {
-                                todayClicks = Number(todayStat.clicks || 0);
-                                todayInstalls = Number(todayStat.installs || 0);
-                            }
-                        }
-
-                        const cr = totalClicks > 0 ? ((totalInstalls / totalClicks) * 100).toFixed(1) : 0;
-                        
-                        if(tbody) {
-                            tbody.innerHTML += `
-                                <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
-                                    <td class="p-3 font-bold text-indigo-600">${link.username || 'Unassigned'}</td>
-                                    <td class="p-3">
-                                        <div class="font-bold text-slate-800">${link.link_name || 'Link'}</div>
-                                        <a href="${link.target_url}" target="_blank" class="text-[10px] text-cyan-600 hover:underline truncate block max-w-[140px] font-mono">${link.target_url}</a>
-                                    </td>
-                                    <td class="p-3 text-center">
-                                        <span class="text-[10px] text-slate-600 font-bold block">Clicks: ${todayClicks}</span>
-                                        <span class="text-[10px] text-slate-600 font-bold block">Installs: ${todayInstalls}</span>
-                                        <span class="text-[9px] text-slate-400 block mt-0.5">(${todayStr})</span>
-                                    </td>
-                                    <td class="p-3 text-center bg-slate-50/50 rounded-xl">
-                                        <div class="flex flex-col gap-1.5 items-center">
-                                            <input type="date" id="statDate_${link.id}" value="${todayStr}" class="bg-white border border-slate-200 rounded p-1 text-[10px] font-bold">
-                                            <div class="flex gap-1">
-                                                <input type="number" id="clicksInput_${link.id}" placeholder="Clicks" class="w-14 bg-white border border-slate-200 text-center rounded p-1 text-[10px]">
-                                                <input type="number" id="installsInput_${link.id}" placeholder="Installs" class="w-14 bg-white border border-slate-200 text-center rounded p-1 text-[10px]">
-                                            </div>
-                                            <button onclick="saveDailyStats(${link.id}, ${link.user_id})" class="bg-cyan-600 hover:bg-cyan-700 text-white text-[9px] px-2 py-1 rounded font-bold shadow-sm w-full">Save Daily</button>
-                                        </div>
-                                    </td>
-                                    <td class="p-3 text-center"><input type="number" id="link_rate_${link.id}" value="${rate.toFixed(2)}" step="0.01" class="w-16 bg-slate-50 border border-slate-200 text-center rounded-lg p-1 text-emerald-600 font-bold text-xs"></td>
-                                    <td class="p-3 text-center font-extrabold text-cyan-600">${cr}%</td>
-                                    <td class="p-3 text-center">
-                                        <div class="flex items-center justify-center gap-1">
-                                            <button onclick="updateLinkRate(${link.id})" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] px-2 py-1 rounded-lg font-bold shadow-sm">Rate</button>
-                                            <button onclick="deleteLink(${link.id})" class="bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white text-[10px] px-2 py-1 rounded-lg font-bold">🗑️</button>
-                                        </div>
-                                    </td>
-                                </tr>`;
-                        }
-                    });
-                } else {
-                    if(tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-slate-400">No links found.</td></tr>`;
-                }
-
-                // Final Net Earnings calculation (Gross Earnings - Total Deductions)
-                const netEarningsFinal = grossEarningsSum - totalDeductions;
-
-                document.getElementById('statActiveLinks').innerText = activeLinksCount;
-                document.getElementById('statTotalClicks').innerText = totalClicksCount.toLocaleString();
-                document.getElementById('statTotalInstalls').innerText = totalInstallsCount.toLocaleString();
-                document.getElementById('statTotalEarnings').innerText = '₹' + netEarningsFinal.toFixed(2);
-            } catch (err) { console.error("Error loading links:", err); }
+async function loadAllLinks() {
+    try {
+        // 1. Fetch Payout/Deduction logs to calculate total deductions
+        let totalDeductions = 0;
+        try {
+            const logsRes = await fetch('/api/admin/payout-logs');
+            const logs = await logsRes.json();
+            if (Array.isArray(logs)) {
+                logs.forEach(log => {
+                    totalDeductions += Math.abs(Number(log.amount) || 0);
+                });
+            }
+        } catch (e) {
+            console.error("Could not fetch logs for deduction calculation", e);
         }
+
+        // 2. Fetch links data
+        const res = await fetch('/api/admin/all-links');
+        const links = await res.json();
+        const tbody = document.getElementById('adminLinksTableBody');
+        if(tbody) tbody.innerHTML = '';
+
+        let activeLinksCount = 0;
+        let totalClicksCount = 0;
+        let totalInstallsCount = 0;
+        let grossEarningsSum = 0;
+
+        // Aaj ki date YYYY-MM-DD format mein nikalna (Local date)
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        if (links && links.length > 0) {
+            activeLinksCount = links.length;
+            links.forEach(link => {
+                const totalClicks = Number(link.clicks || 0);
+                const totalInstalls = Number(link.installs || 0);
+                const rate = Number(link.rate_per_install || 0);
+                
+                totalClicksCount += totalClicks;
+                totalInstallsCount += totalInstalls;
+                grossEarningsSum += (totalInstalls * rate);
+
+                // Aaj ke din ka data nikalna daily_stats se
+                let todayClicks = 0;
+                let todayInstalls = 0;
+                if (link.daily_stats && Array.isArray(link.daily_stats)) {
+                    const todayStat = link.daily_stats.find(d => d.stat_date === todayStr);
+                    if (todayStat) {
+                        todayClicks = Number(todayStat.clicks || 0);
+                        todayInstalls = Number(todayStat.installs || 0);
+                    }
+                }
+
+                const cr = totalClicks > 0 ? ((totalInstalls / totalClicks) * 100).toFixed(1) : 0;
+                
+                if(tbody) {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
+                            <td class="p-3 font-bold text-indigo-600">${link.username || 'Unassigned'}</td>
+                            <td class="p-3">
+                                <div class="font-bold text-slate-800">${link.link_name || 'Link'}</div>
+                                <a href="${link.target_url}" target="_blank" class="text-[10px] text-cyan-600 hover:underline truncate block max-w-[140px] font-mono">${link.target_url}</a>
+                            </td>
+                            <td class="p-3 text-center">
+                                <span class="text-[10px] text-slate-600 font-bold block">Clicks: ${todayClicks}</span>
+                                <span class="text-[10px] text-slate-600 font-bold block">Installs: ${todayInstalls}</span>
+                                <span class="text-[9px] text-slate-400 block mt-0.5">(${todayStr})</span>
+                            </td>
+                            <td class="p-3 text-center bg-slate-50/50 rounded-xl">
+                                <div class="flex flex-col gap-1.5 items-center">
+                                    <input type="date" id="statDate_${link.id}" value="${todayStr}" class="bg-white border border-slate-200 rounded p-1 text-[10px] font-bold">
+                                    <div class="flex gap-1">
+                                        <!-- Yahan value pre-fill kar di gayi hai taaki data direct dikhe -->
+                                        <input type="number" id="clicksInput_${link.id}" value="${todayClicks}" placeholder="Clicks" class="w-14 bg-white border border-slate-200 text-center rounded p-1 text-[10px]">
+                                        <input type="number" id="installsInput_${link.id}" value="${todayInstalls}" placeholder="Installs" class="w-14 bg-white border border-slate-200 text-center rounded p-1 text-[10px]">
+                                    </div>
+                                    <button onclick="saveDailyStats(${link.id}, ${link.user_id})" class="bg-cyan-600 hover:bg-cyan-700 text-white text-[9px] px-2 py-1 rounded font-bold shadow-sm w-full">Save Daily</button>
+                                </div>
+                            </td>
+                            <td class="p-3 text-center"><input type="number" id="link_rate_${link.id}" value="${rate.toFixed(2)}" step="0.01" class="w-16 bg-slate-50 border border-slate-200 text-center rounded-lg p-1 text-emerald-600 font-bold text-xs"></td>
+                            <td class="p-3 text-center font-extrabold text-cyan-600">${cr}%</td>
+                            <td class="p-3 text-center">
+                                <div class="flex items-center justify-center gap-1">
+                                    <button onclick="updateLinkRate(${link.id})" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] px-2 py-1 rounded-lg font-bold shadow-sm">Rate</button>
+                                    <button onclick="deletelink(${link.id})" class="bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white text-[10px] px-2 py-1 rounded-lg font-bold">🗑️</button>
+                                </div>
+                            </td>
+                        </tr>`;
+                }
+            });
+        } else {
+            if(tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-slate-400">No links found.</td></tr>`;
+        }
+
+        const netEarningsFinal = grossEarningsSum - totalDeductions;
+
+        document.getElementById('statActiveLinks').innerText = activeLinksCount;
+        document.getElementById('statTotalClicks').innerText = totalClicksCount.toLocaleString();
+        document.getElementById('statTotalInstalls').innerText = totalInstallsCount.toLocaleString();
+        document.getElementById('statTotalEarnings').innerText = '₹' + netEarningsFinal.toFixed(2);
+    } catch (err) { console.error("Error loading links:", err); }
+}
 
         async function loadAdminPayoutLogs() {
             try {

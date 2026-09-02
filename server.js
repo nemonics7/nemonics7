@@ -7,12 +7,12 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Supabase Setup
+// Supabase Setup[cite: 4]
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Middleware
+// Middleware[cite: 4]
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -25,12 +25,12 @@ app.use(session({
     saveUninitialized: false
 }));
 
-// Helper function for IST Date (YYYY-MM-DD)
+// Helper function for IST Date (YYYY-MM-DD)[cite: 4]
 function getTodayIST() {
     return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 }
 
-// Authentication Middleware
+// Authentication Middleware[cite: 4]
 function isAuthenticated(req, res, next) {
     if (req.session.user) return next();
     res.status(401).json({ error: 'Unauthorized' });
@@ -87,11 +87,19 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
         const { data: users, error } = await supabase.from('users').select('id, username, role, rate_per_install');
         if (error) return res.status(500).json({ error: error.message });
 
-        // Fetch all links to calculate total installs and earnings per user dynamically
         const { data: links } = await supabase.from('links').select('id, user_id, installs, rate_per_install');
-        
-        // Fetch all daily_stats to get accurate synced installs
         const { data: allDailyStats } = await supabase.from('daily_stats').select('link_id, installs');
+        
+        // Fetch total deductions per user to subtract from total earnings[cite: 4]
+        const { data: allLogs } = await supabase.from('payout_logs').select('user_id, amount');
+        const userDeductionsMap = {};
+        if (allLogs) {
+            allLogs.forEach(l => {
+                if (!userDeductionsMap[l.user_id]) userDeductionsMap[l.user_id] = 0;
+                userDeductionsMap[l.user_id] += Math.abs(Number(l.amount) || 0);
+            });
+        }
+
         const linkInstallsMap = {};
         if (allDailyStats) {
             allDailyStats.forEach(d => {
@@ -112,7 +120,6 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
         if (links) {
             links.forEach(l => {
                 if (userMap[l.user_id]) {
-                    // Use daily_stats installs if available, else link installs
                     const installs = linkInstallsMap[l.id] !== undefined ? linkInstallsMap[l.id] : (l.installs || 0);
                     const rate = Number(l.rate_per_install || userMap[l.user_id].rate_per_install || 0);
                     
@@ -122,6 +129,12 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
             });
         }
 
+        // Subtract deductions from total earnings
+        Object.keys(userMap).forEach(uid => {
+            const deductions = userDeductionsMap[uid] || 0;
+            userMap[uid].total_earnings = Math.max(0, userMap[uid].total_earnings - deductions);
+        });
+
         const enrichedUsers = Object.values(userMap);
         res.json(enrichedUsers);
     } catch (err) {
@@ -130,7 +143,7 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
     }
 });
 
-// Update User Rate per install
+// Update User Rate per install[cite: 4]
 app.post('/api/admin/set-rate', isAdmin, async (req, res) => {
     const { userId, rate } = req.body;
     try {
@@ -146,12 +159,11 @@ app.post('/api/admin/set-rate', isAdmin, async (req, res) => {
     }
 });
 
-// Process Custom Payout / Reset or Adjust Installs with Log Entry
+// Process Custom Payout / Reset or Adjust Installs with Log Entry[cite: 4]
 app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
     const userId = req.params.userId;
     const { amount_paid, note } = req.body;
     try {
-        // Reset user installs or process payout balance
         const { error } = await supabase
             .from('users')
             .update({ total_installs: 0 }) 
@@ -159,7 +171,6 @@ app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
 
         if (error) return res.status(500).json({ error: error.message });
 
-        // Save entry in payout logs table if table exists
         await supabase.from('payout_logs').insert([{
             user_id: parseInt(userId),
             amount: parseFloat(amount_paid) || 0,
@@ -172,7 +183,7 @@ app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
     }
 });
 
-// Deduct Balance / Installs from a User and update links, daily_stats & logs
+// --- UPDATED DEDUCT ROUTE: DOES NOT TOUCH INSTALLS, ONLY LOGS & DEDUCTS AMOUNT ---
 app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
     const userId = req.params.userId;
     const amount_deducted = req.body.amount_deducted || req.body.amount || req.body.deduction;
@@ -194,51 +205,7 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const userRate = parseFloat(user.rate_per_install) || 1; 
-        const installsToDeduct = Math.round(numAmount / userRate);
-
-        const { data: links, error: linkErr } = await supabase
-            .from('links')
-            .select('*')
-            .eq('user_id', userId);
-
-        if (!linkErr && links && links.length > 0) {
-            let remainingToDeduct = installsToDeduct;
-            
-            for (let link of links) {
-                if (remainingToDeduct <= 0) break;
-                const currentInstalls = link.installs || 0;
-                const deductFromThis = Math.min(currentInstalls, remainingToDeduct);
-                
-                if (deductFromThis > 0) {
-                    const newInstalls = currentInstalls - deductFromThis;
-                    
-                    await supabase
-                        .from('links')
-                        .update({ installs: newInstalls })
-                        .eq('id', link.id);
-
-                    const todayStr = getTodayIST();
-                    const { data: dailyRecord } = await supabase
-                        .from('daily_stats')
-                        .select('*')
-                        .eq('link_id', link.id)
-                        .eq('stat_date', todayStr)
-                        .maybeSingle();
-
-                    if (dailyRecord) {
-                        const updatedDailyInstalls = Math.max(0, (dailyRecord.installs || 0) - deductFromThis);
-                        await supabase
-                            .from('daily_stats')
-                            .update({ installs: updatedDailyInstalls })
-                            .eq('id', dailyRecord.id);
-                    }
-                    
-                    remainingToDeduct -= deductFromThis;
-                }
-            }
-        }
-
+        // Only insert into payout_logs. Installs are intentionally untouched[cite: 4].
         const { error: logErr } = await supabase.from('payout_logs').insert([{
             user_id: parseInt(userId),
             amount: -Math.abs(numAmount),
@@ -247,16 +214,17 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
 
         if (logErr) {
             console.error("Payout log insert warning:", logErr.message);
+            return res.status(500).json({ error: logErr.message });
         }
 
-        res.json({ success: true, message: 'Amount successfully deducted, logs updated & dashboard synced!' });
+        res.json({ success: true, message: 'Amount successfully deducted and logged without altering installs!' });
     } catch (err) {
         console.error("Deduction error:", err);
         res.status(500).json({ error: 'Server error while processing deduction' });
     }
 });
 
-// --- ADMIN PAYOUT LOGS API ROUTE ---
+// --- ADMIN PAYOUT LOGS API ROUTE ---[cite: 4]
 app.get('/api/admin/payout-logs', isAdmin, async (req, res) => {
     try {
         const { data: logs, error } = await supabase
@@ -271,6 +239,26 @@ app.get('/api/admin/payout-logs', isAdmin, async (req, res) => {
         res.json(logs || []);
     } catch (err) {
         res.status(500).json({ error: 'Server error while fetching payout logs' });
+    }
+});
+
+// --- USER PAYOUT / DEDUCTION LOGS API ROUTE (NEW) ---
+app.get('/api/user/payout-logs', isAuthenticated, async (req, res) => {
+    const userId = req.session.user.id;
+    try {
+        const { data: logs, error } = await supabase
+            .from('payout_logs')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            return res.json([]);
+        }
+
+        res.json(logs || []);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error while fetching user payout logs' });
     }
 });
 
@@ -321,7 +309,7 @@ app.post('/api/admin/assign-links', isAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// --- ADMIN ALL-LINKS API ---
+// --- ADMIN ALL-LINKS API ---[cite: 4]
 app.get('/api/admin/all-links', isAdmin, async (req, res) => {
     try {
         const { data: links, error: linkError } = await supabase.from('links').select('*').order('created_at', { ascending: false });
@@ -377,7 +365,7 @@ app.post('/api/admin/adjust-stats', isAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
-// Delete Link API Route
+// Delete Link API Route[cite: 4]
 app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     const { link_id } = req.body;
     try {
@@ -389,7 +377,7 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     }
 });
 
-// --- USER LINKS API WITH SEPARATE FILTERED & ALL-TIME STATS ---
+// --- USER LINKS API WITH DEDUCTIONS SUBTRACTION ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     let { startDate, endDate } = req.query;
@@ -411,7 +399,6 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
             linkRateMap[l.id] = Number(l.rate_per_install || req.session.user.rate_per_install || 0);
         });
 
-        // 1. Fetch ALL-TIME stats for Payout / Balance Section (Unaffected by date filter)
         const { data: allTimeStats } = await supabase
             .from('daily_stats')
             .select('*')
@@ -429,7 +416,21 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
             });
         }
 
-        // 2. Fetch FILTERED stats for Analytics section (Affected by date filter)
+        // Fetch user deductions to subtract from user dashboard earnings[cite: 4]
+        const { data: userLogs } = await supabase
+            .from('payout_logs')
+            .select('amount')
+            .eq('user_id', userId);
+
+        let totalDeductions = 0;
+        if (userLogs) {
+            userLogs.forEach(l => {
+                totalDeductions += Math.abs(Number(l.amount) || 0);
+            });
+        }
+
+        allTimeEarnings = Math.max(0, allTimeEarnings - totalDeductions);
+
         let filteredClicks = 0, filteredInstalls = 0, filteredEarnings = 0;
         let filteredLinks = links;
 
@@ -471,6 +472,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
                 filteredInstalls += i;
                 filteredEarnings += (i * rate);
             });
+            filteredEarnings = Math.max(0, filteredEarnings - totalDeductions);
         } else {
             filteredClicks = allTimeClicks;
             filteredInstalls = allTimeInstalls;
@@ -496,7 +498,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
     }
 });
 
-// --- SHORT URL REDIRECT ROUTE ---
+// --- SHORT URL REDIRECT ROUTE ---[cite: 4]
 app.get('/s/:shortCode', async (req, res) => {
     try {
         const shortCode = req.params.shortCode;
@@ -550,7 +552,7 @@ app.get('/s/:shortCode', async (req, res) => {
     }
 });
 
-// --- ADMIN EDIT / UPSERT DAILY STATS ---
+// --- ADMIN EDIT / UPSERT DAILY STATS ---[cite: 4]
 app.post('/api/admin/edit-daily-stats', isAdmin, async (req, res) => {
     const { link_id, user_id, stat_date, clicks, installs } = req.body;
 

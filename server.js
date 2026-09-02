@@ -179,6 +179,7 @@ app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
     }
 });
 
+// --- UPDATED DEDUCT ROUTE: CHECKS IF USER HAS ENOUGH BALANCE BEFORE DEDUCTING ---
 app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
     const userId = req.params.userId;
     const amount_deducted = req.body.amount_deducted || req.body.amount || req.body.deduction;
@@ -190,16 +191,61 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             return res.status(400).json({ error: 'Invalid deduction amount' });
         }
 
-        const { data: user, error: userErr } = await supabase
-            .from('users')
+        // 1. User ki links aur installs se total earnings nikalna
+        const { data: links, error: linkErr } = await supabase
+            .from('links')
             .select('*')
-            .eq('id', userId)
-            .single();
+            .eq('user_id', userId);
 
-        if (userErr || !user) {
-            return res.status(404).json({ error: 'User not found' });
+        if (linkErr) {
+            return res.status(500).json({ error: 'Error fetching user links' });
         }
 
+        const { data: allDailyStats } = await supabase
+            .from('daily_stats')
+            .select('*')
+            .eq('user_id', userId);
+
+        let totalEarnings = 0;
+        if (links && links.length > 0) {
+            const linkRateMap = {};
+            links.forEach(l => {
+                linkRateMap[l.id] = Number(l.rate_per_install || 0);
+            });
+
+            if (allDailyStats) {
+                allDailyStats.forEach(d => {
+                    const i = d.installs || 0;
+                    const rate = linkRateMap[d.link_id] || 0;
+                    totalEarnings += (i * rate);
+                });
+            }
+        }
+
+        // 2. Ab tak ke saare payouts/deductions minus karna
+        const { data: userLogs } = await supabase
+            .from('payout_logs')
+            .select('amount')
+            .eq('user_id', userId);
+
+        let totalDeductionsOrPaid = 0;
+        if (userLogs) {
+            userLogs.forEach(l => {
+                totalDeductionsOrPaid += Math.abs(Number(l.amount) || 0);
+            });
+        }
+
+        // 3. Available Net Balance calculate karna
+        const availableBalance = Math.max(0, totalEarnings - totalDeductionsOrPaid);
+
+        // 4. Check karna ki amount available balance se zyada toh nahi
+        if (numAmount > availableBalance) {
+            return res.status(400).json({ 
+                error: `Cannot deduct ₹${numAmount}. User only has available balance of ₹${availableBalance.toFixed(2)}!` 
+            });
+        }
+
+        // 5. Agar balance sahi hai, tabhi payout_logs mein entry save hogi
         const { error: logErr } = await supabase.from('payout_logs').insert([{
             user_id: parseInt(userId),
             amount: -Math.abs(numAmount),
@@ -212,6 +258,7 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
 
         res.json({ success: true, message: 'Amount successfully deducted and logged!' });
     } catch (err) {
+        console.error("Deduction error:", err);
         res.status(500).json({ error: 'Server error while processing deduction' });
     }
 });

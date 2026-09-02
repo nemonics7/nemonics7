@@ -90,23 +90,27 @@
         <!-- MAIN CONTENT AREA -->
         <main class="flex-1 p-6 lg:p-10 space-y-6 overflow-y-auto">
             
-            <!-- Mobile Header with Hamburger Menu & Nemonics/Active Alignment -->
-            <header class="flex md:hidden justify-between items-center glass-card p-4 rounded-2xl mb-6">
-                <div class="flex items-center gap-3">
-                    <button onclick="toggleSidebarDrawer()" class="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all flex items-center justify-center shadow-sm">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                        </svg>
-                    </button>
-                    <!-- Nemonics on Left -->
-                    <div class="flex items-center gap-2">
-                        <div class="w-7 h-7 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 flex items-center justify-center font-extrabold text-xs text-white shadow-md">N</div>
-                        <h1 class="font-extrabold text-sm text-slate-900">Nemonics</h1>
+            <!-- MOBILE HEADER (Hamburger + Welcome Section + Live Sync) -->
+            <header class="flex md:hidden flex-col gap-4 glass-card p-5 rounded-3xl mb-6">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <button onclick="toggleSidebarDrawer()" class="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all flex items-center justify-center shadow-sm">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            </svg>
+                        </button>
+                        <div class="flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 flex items-center justify-center font-extrabold text-xs text-white shadow-md">N</div>
+                            <h2 class="font-extrabold text-sm text-slate-900">Nemonics</h2>
+                        </div>
+                    </div>
+                    <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] font-semibold text-slate-700 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Live Sync Active
                     </div>
                 </div>
-                <!-- Active Badge on Extreme Right -->
-                <div class="px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-emerald-600 font-bold text-[9px]">
-                    Active
+                <div>
+                    <h1 class="text-xl font-extrabold bg-gradient-to-r from-cyan-600 via-sky-600 to-indigo-600 bg-clip-text text-transparent" id="mobileWelcomeText">Welcome, User</h1>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Daily tracking & performance analytics dashboard</p>
                 </div>
             </header>
 
@@ -305,9 +309,13 @@
                 const meRes = await fetch('/api/me');
                 if (meRes.ok) {
                     const user = await meRes.json();
-                    document.getElementById('welcomeText').textContent = `Welcome, ${user.username || 'User'}`;
-                    userRatePerInstall = Number(user.rate_per_install || 0);
+                    const welcomeTextVal = `Welcome, ${user.username || 'User'}`;
                     
+                    document.getElementById('welcomeText').textContent = welcomeTextVal;
+                    const mobEl = document.getElementById('mobileWelcomeText');
+                    if(mobEl) mobEl.textContent = welcomeTextVal;
+
+                    userRatePerInstall = Number(user.rate_per_install || 0);
                     document.getElementById('earningsRateDisplay').textContent = `₹${userRatePerInstall.toFixed(2)}`;
                 }
             } catch (err) {

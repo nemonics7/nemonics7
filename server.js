@@ -50,22 +50,24 @@ app.get('/user', isAuthenticated, (req, res) => {
 });
 app.get('/admin', isAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 
-// --- AUTH API ROUTES ---
+// --- AUTH API ROUTES (UPDATED FOR GMAIL & PASSWORD) ---
 app.post('/api/login', async (req, res) => {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
     try {
         const { data: users, error } = await supabase
-            .from('users')
+            .from('userid') // Aapka table naam 'userid' hai
             .select('*')
-            .eq('username', username)
+            .eq('email', email)
             .eq('password', password)
             .limit(1);
 
-        if (error || !users || users.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
+        if (error || !users || users.length === 0) return res.status(401).json({ success: false, error: 'Invalid Gmail or password' });
 
         req.session.user = users[0];
         res.json({ success: true, role: users[0].role });
-    } catch (err) { res.status(500).json({ error: 'Server error' }); }
+    } catch (err) { 
+        res.status(500).json({ success: false, error: 'Server error' }); 
+    }
 });
 
 app.post('/api/logout', (req, res) => { req.session.destroy(() => res.json({ success: true })); });
@@ -73,7 +75,7 @@ app.post('/api/logout', (req, res) => { req.session.destroy(() => res.json({ suc
 app.get('/api/me', isAuthenticated, async (req, res) => {
     try {
         const { data: currentUser } = await supabase
-            .from('users')
+            .from('userid')
             .select('*')
             .eq('id', req.session.user.id)
             .single();
@@ -84,7 +86,7 @@ app.get('/api/me', isAuthenticated, async (req, res) => {
 
 app.get('/api/admin/users', isAdmin, async (req, res) => {
     try {
-        const { data: users, error } = await supabase.from('users').select('id, username, role, rate_per_install');
+        const { data: users, error } = await supabase.from('userid').select('id, name, email, role, rate_per_install');
         if (error) return res.status(500).json({ error: error.message });
 
         const { data: links } = await supabase.from('links').select('id, user_id, installs, rate_per_install');
@@ -145,7 +147,7 @@ app.post('/api/admin/set-rate', isAdmin, async (req, res) => {
     const { userId, rate } = req.body;
     try {
         const { error } = await supabase
-            .from('users')
+            .from('userid')
             .update({ rate_per_install: parseFloat(rate) || 0 })
             .eq('id', userId);
 
@@ -160,13 +162,6 @@ app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
     const userId = req.params.userId;
     const { amount_paid, note } = req.body;
     try {
-        const { error } = await supabase
-            .from('users')
-            .update({ total_installs: 0 }) 
-            .eq('id', userId);
-
-        if (error) return res.status(500).json({ error: error.message });
-
         await supabase.from('payout_logs').insert([{
             user_id: parseInt(userId),
             amount: parseFloat(amount_paid) || 0,
@@ -179,7 +174,6 @@ app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
     }
 });
 
-// --- UPDATED DEDUCT ROUTE: CHECKS IF USER HAS ENOUGH BALANCE BEFORE DEDUCTING ---
 app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
     const userId = req.params.userId;
     const amount_deducted = req.body.amount_deducted || req.body.amount || req.body.deduction;
@@ -191,27 +185,13 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             return res.status(400).json({ error: 'Invalid deduction amount' });
         }
 
-        // 1. User ki links aur installs se total earnings nikalna
-        const { data: links, error: linkErr } = await supabase
-            .from('links')
-            .select('*')
-            .eq('user_id', userId);
-
-        if (linkErr) {
-            return res.status(500).json({ error: 'Error fetching user links' });
-        }
-
-        const { data: allDailyStats } = await supabase
-            .from('daily_stats')
-            .select('*')
-            .eq('user_id', userId);
+        const { data: links } = await supabase.from('links').select('*').eq('user_id', userId);
+        const { data: allDailyStats } = await supabase.from('daily_stats').select('*').eq('user_id', userId);
 
         let totalEarnings = 0;
         if (links && links.length > 0) {
             const linkRateMap = {};
-            links.forEach(l => {
-                linkRateMap[l.id] = Number(l.rate_per_install || 0);
-            });
+            links.forEach(l => { linkRateMap[l.id] = Number(l.rate_per_install || 0); });
 
             if (allDailyStats) {
                 allDailyStats.forEach(d => {
@@ -222,97 +202,66 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             }
         }
 
-        // 2. Ab tak ke saare payouts/deductions minus karna
-        const { data: userLogs } = await supabase
-            .from('payout_logs')
-            .select('amount')
-            .eq('user_id', userId);
-
+        const { data: userLogs } = await supabase.from('payout_logs').select('amount').eq('user_id', userId);
         let totalDeductionsOrPaid = 0;
         if (userLogs) {
-            userLogs.forEach(l => {
-                totalDeductionsOrPaid += Math.abs(Number(l.amount) || 0);
-            });
+            userLogs.forEach(l => { totalDeductionsOrPaid += Math.abs(Number(l.amount) || 0); });
         }
 
-        // 3. Available Net Balance calculate karna
         const availableBalance = Math.max(0, totalEarnings - totalDeductionsOrPaid);
 
-        // 4. Check karna ki amount available balance se zyada toh nahi
         if (numAmount > availableBalance) {
             return res.status(400).json({ 
                 error: `Cannot deduct ₹${numAmount}. User only has available balance of ₹${availableBalance.toFixed(2)}!` 
             });
         }
 
-        // 5. Agar balance sahi hai, tabhi payout_logs mein entry save hogi
         const { error: logErr } = await supabase.from('payout_logs').insert([{
             user_id: parseInt(userId),
             amount: -Math.abs(numAmount),
             note: note ? `Deduction: ${note}` : 'Amount Deducted'
         }]);
 
-        if (logErr) {
-            return res.status(500).json({ error: logErr.message });
-        }
+        if (logErr) return res.status(500).json({ error: logErr.message });
 
         res.json({ success: true, message: 'Amount successfully deducted and logged!' });
     } catch (err) {
-        console.error("Deduction error:", err);
         res.status(500).json({ error: 'Server error while processing deduction' });
     }
 });
 
 app.get('/api/admin/payout-logs', isAdmin, async (req, res) => {
     try {
-        const { data: logs, error } = await supabase
-            .from('payout_logs')
-            .select('*')
-            .order('created_at', { ascending: false });
-
+        const { data: logs, error } = await supabase.from('payout_logs').select('*').order('created_at', { ascending: false });
         if (error) return res.json([]);
         res.json(logs || []);
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
+    } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
 app.get('/api/user/payout-logs', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     try {
-        const { data: logs, error } = await supabase
-            .from('payout_logs')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false });
-
+        const { data: logs, error } = await supabase.from('payout_logs').select('*').eq('user_id', userId).order('created_at', { ascending: false });
         if (error) return res.json([]);
         res.json(logs || []);
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
+    } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
 app.post('/api/admin/set-link-rate', isAdmin, async (req, res) => {
     const { link_id, rate } = req.body;
     try {
-        const { error } = await supabase
-            .from('links')
-            .update({ rate_per_install: parseFloat(rate) || 0 })
-            .eq('id', link_id);
-
+        const { error } = await supabase.from('links').update({ rate_per_install: parseFloat(rate) || 0 }).eq('id', link_id);
         if (error) return res.status(500).json({ error: error.message });
         res.json({ success: true, message: 'Link rate updated successfully' });
-    } catch (err) { 
-        res.status(500).json({ error: 'Failed to update link rate' }); 
-    }
+    } catch (err) { res.status(500).json({ error: 'Failed to update link rate' }); }
 });
 
+// --- UPDATED CREATE USER ROUTE (SUPPORTS NAME, GMAIL, PASSWORD) ---
 app.post('/api/admin/create-user', isAdmin, async (req, res) => {
-    const { username, password } = req.body;
+    const { name, email, password } = req.body;
     const { data, error } = await supabase
-        .from('users')
-        .insert([{ username, password, role: 'user', total_installs: 0, rate_per_install: 0 }]);
+        .from('userid')
+        .insert([{ name, email, password, role: 'user', rate_per_install: 0 }]);
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true, data });
 });
@@ -345,31 +294,23 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
         const { data: links, error: linkError } = await supabase.from('links').select('*').order('created_at', { ascending: false });
         if (linkError) return res.status(500).json({ error: linkError.message });
         
-        const { data: users, error: userError } = await supabase.from('users').select('id, username');
+        const { data: users, error: userError } = await supabase.from('userid').select('id, name, email');
         if (userError) return res.status(500).json({ error: userError.message });
         
         const userMap = {};
-        if (users) users.forEach(u => { userMap[u.id] = u.username; });
+        if (users) users.forEach(u => { userMap[u.id] = u.name || u.email; });
 
-        // Saare daily stats fetch karein link_id ke sath
         const { data: allDailyStats } = await supabase.from('daily_stats').select('link_id, stat_date, clicks, installs');
-        
         const totalsMap = {};
-        const fullDailyStatsMap = {}; // Har link ke saare daily stats store karne ke liye
+        const fullDailyStatsMap = {};
 
         if (allDailyStats) {
             allDailyStats.forEach(d => {
-                // Total calculation map
-                if (!totalsMap[d.link_id]) {
-                    totalsMap[d.link_id] = { clicks: 0, installs: 0 };
-                }
+                if (!totalsMap[d.link_id]) totalsMap[d.link_id] = { clicks: 0, installs: 0 };
                 totalsMap[d.link_id].clicks += (d.clicks || 0);
                 totalsMap[d.link_id].installs += (d.installs || 0);
 
-                // Full daily stats array map per link
-                if (!fullDailyStatsMap[d.link_id]) {
-                    fullDailyStatsMap[d.link_id] = [];
-                }
+                if (!fullDailyStatsMap[d.link_id]) fullDailyStatsMap[d.link_id] = [];
                 fullDailyStatsMap[d.link_id].push(d);
             });
         }
@@ -378,9 +319,7 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
         const { data: dailyStats } = await supabase.from('daily_stats').select('*').eq('stat_date', todayStr);
         const dailyMap = {};
         if (dailyStats) {
-            dailyStats.forEach(d => {
-                dailyMap[d.link_id] = { clicks: d.clicks || 0, installs: d.installs || 0 };
-            });
+            dailyStats.forEach(d => { dailyMap[d.link_id] = { clicks: d.clicks || 0, installs: d.installs || 0 }; });
         }
 
         const enrichedLinks = links.map(link => {
@@ -392,13 +331,12 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
                 username: userMap[link.user_id] || 'Unassigned',
                 today_clicks: dailyMap[link.id] ? dailyMap[link.id].clicks : 0,
                 today_installs: dailyMap[link.id] ? dailyMap[link.id].installs : 0,
-                daily_stats: fullDailyStatsMap[link.id] || [] // 👈 Yeh line zaroori hai frontend ke liye
+                daily_stats: fullDailyStatsMap[link.id] || []
             };
         });
 
         res.json(enrichedLinks);
     } catch (err) { 
-        console.error(err);
         res.status(500).json({ error: 'Server error' }); 
     }
 });
@@ -416,36 +354,21 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
         const { error } = await supabase.from('links').delete().eq('id', link_id);
         if (error) return res.status(500).json({ error: error.message });
         res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
+    } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// --- USER LINKS API: PURE ANALYTICS (NO DEDUCTION SUBTRACTION IN STATS) ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     let { startDate, endDate } = req.query;
 
     try {
-        const { data: links, error } = await supabase
-            .from('links')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            return res.status(500).json({ error: error.message });
-        }
+        const { data: links, error } = await supabase.from('links').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+        if (error) return res.status(500).json({ error: error.message });
 
         const linkRateMap = {};
-        links.forEach(l => {
-            linkRateMap[l.id] = Number(l.rate_per_install || req.session.user.rate_per_install || 0);
-        });
+        links.forEach(l => { linkRateMap[l.id] = Number(l.rate_per_install || req.session.user.rate_per_install || 0); });
 
-        const { data: allTimeStats } = await supabase
-            .from('daily_stats')
-            .select('*')
-            .eq('user_id', userId);
+        const { data: allTimeStats } = await supabase.from('daily_stats').select('*').eq('user_id', userId);
 
         let allTimeClicks = 0, allTimeInstalls = 0, allTimeGrossEarnings = 0;
         if (allTimeStats) {
@@ -459,23 +382,15 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
             });
         }
 
-        let filteredClicks = 0, filteredInstalls = 0, filteredEarnings = 0;
+        let filteredClicks = allTimeClicks, filteredInstalls = allTimeInstalls, filteredEarnings = allTimeGrossEarnings;
         let filteredLinks = links;
 
         if (startDate && endDate) {
-            const { data: filteredDailyStats } = await supabase
-                .from('daily_stats')
-                .select('*')
-                .eq('user_id', userId)
-                .gte('stat_date', startDate)
-                .lte('stat_date', endDate);
-
+            const { data: filteredDailyStats } = await supabase.from('daily_stats').select('*').eq('user_id', userId).gte('stat_date', startDate).lte('stat_date', endDate);
             let dailyMap = {};
             if (filteredDailyStats) {
                 filteredDailyStats.forEach(d => {
-                    if (!dailyMap[d.link_id]) {
-                        dailyMap[d.link_id] = { clicks: 0, installs: 0 };
-                    }
+                    if (!dailyMap[d.link_id]) dailyMap[d.link_id] = { clicks: 0, installs: 0 };
                     dailyMap[d.link_id].clicks += (d.clicks || 0);
                     dailyMap[d.link_id].installs += (d.installs || 0);
                 });
@@ -483,163 +398,82 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
 
             filteredLinks = links.map(l => {
                 const stats = dailyMap[l.id] || { clicks: 0, installs: 0 };
-                return {
-                    ...l,
-                    clicks: stats.clicks,
-                    installs: stats.installs,
-                    today_clicks: stats.clicks,
-                    today_installs: stats.installs
-                };
+                return { ...l, clicks: stats.clicks, installs: stats.installs, today_clicks: stats.clicks, today_installs: stats.installs };
             });
 
-            filteredDailyStats.forEach(d => {
-                const c = d.clicks || 0;
-                const i = d.installs || 0;
-                const rate = linkRateMap[d.link_id] || 0;
-                filteredClicks += c;
-                filteredInstalls += i;
-                filteredEarnings += (i * rate);
-            });
-        } else {
-            filteredClicks = allTimeClicks;
-            filteredInstalls = allTimeInstalls;
-            filteredEarnings = allTimeGrossEarnings;
+            filteredClicks = 0; filteredInstalls = 0; filteredEarnings = 0;
+            if (filteredDailyStats) {
+                filteredDailyStats.forEach(d => {
+                    filteredClicks += (d.clicks || 0);
+                    filteredInstalls += (d.installs || 0);
+                    filteredEarnings += ((d.installs || 0) * (linkRateMap[d.link_id] || 0));
+                });
+            }
         }
 
         res.json({ 
             links: filteredLinks, 
-            stats: { 
-                totalClicks: filteredClicks, 
-                totalInstalls: filteredInstalls, 
-                totalEarnings: filteredEarnings 
-            }, 
-            payoutStats: { 
-                totalClicks: allTimeClicks, 
-                totalInstalls: allTimeInstalls, 
-                totalEarnings: allTimeGrossEarnings 
-            }
+            stats: { totalClicks: filteredClicks, totalInstalls: filteredInstalls, totalEarnings: filteredEarnings }, 
+            payoutStats: { totalClicks: allTimeClicks, totalInstalls: allTimeInstalls, totalEarnings: allTimeGrossEarnings }
         });
     } catch (err) { 
-        console.error("User links API error:", err);
         res.status(500).json({ error: 'Server error' }); 
     }
 });
 
-// --- SHORT URL REDIRECT ROUTE ---
 app.get('/s/:shortCode', async (req, res) => {
     try {
         const shortCode = req.params.shortCode;
         const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
 
-        const { data: link, error: linkErr } = await supabase
-          .from('links')
-          .select('*')
-          .eq('short_code', shortCode)
-          .single();
-
-        if (linkErr || !link || !link.target_url) {
-            return res.status(404).send('Link not found or expired.');
-        }
+        const { data: link, error: linkErr } = await supabase.from('links').select('*').eq('short_code', shortCode).single();
+        if (linkErr || !link || !link.target_url) return res.status(404).send('Link not found or expired.');
 
         const targetUrl = link.target_url.trim();
-
         await supabase.from('link_clicks').insert([{ link_id: link.id, ip_address: clientIp }]);
         await supabase.from('links').update({ clicks: (link.clicks || 0) + 1 }).eq('id', link.id);
 
         const todayStr = getTodayIST();
-
-        const { data: existingDaily } = await supabase
-            .from('daily_stats')
-            .select('id, clicks')
-            .eq('link_id', link.id)
-            .eq('stat_date', todayStr)
-            .maybeSingle();
+        const { data: existingDaily } = await supabase.from('daily_stats').select('id, clicks').eq('link_id', link.id).eq('stat_date', todayStr).maybeSingle();
 
         if (existingDaily) {
-            await supabase
-                .from('daily_stats')
-                .update({ clicks: (existingDaily.clicks || 0) + 1 })
-                .eq('id', existingDaily.id);
+            await supabase.from('daily_stats').update({ clicks: (existingDaily.clicks || 0) + 1 }).eq('id', existingDaily.id);
         } else {
-            await supabase
-                .from('daily_stats')
-                .insert([{
-                    link_id: link.id,
-                    user_id: link.user_id,
-                    clicks: 1,
-                    installs: 0,
-                    stat_date: todayStr
-                }]);
+            await supabase.from('daily_stats').insert([{ link_id: link.id, user_id: link.user_id, clicks: 1, installs: 0, stat_date: todayStr }]);
         }
 
         return res.redirect(targetUrl);
-    } catch (err) {
-        res.status(500).send('Server Error');
-    }
+    } catch (err) { res.status(500).send('Server Error'); }
 });
 
 app.post('/api/admin/edit-daily-stats', isAdmin, async (req, res) => {
     const { link_id, user_id, stat_date, clicks, installs } = req.body;
-
-    if (!link_id || !stat_date) {
-        return res.status(400).json({ error: 'Link ID and Stat Date are required' });
-    }
+    if (!link_id || !stat_date) return res.status(400).json({ error: 'Link ID and Stat Date are required' });
 
     try {
         const newClicks = parseInt(clicks) || 0;
         const newInstalls = parseInt(installs) || 0;
 
-        const { data: existing } = await supabase
-            .from('daily_stats')
-            .select('id')
-            .eq('link_id', link_id)
-            .eq('stat_date', stat_date)
-            .maybeSingle();
+        const { data: existing } = await supabase.from('daily_stats').select('id').eq('link_id', link_id).eq('stat_date', stat_date).maybeSingle();
 
         if (existing) {
-            await supabase
-                .from('daily_stats')
-                .update({ clicks: newClicks, installs: newInstalls })
-                .eq('id', existing.id);
+            await supabase.from('daily_stats').update({ clicks: newClicks, installs: newInstalls }).eq('id', existing.id);
         } else {
-            await supabase
-                .from('daily_stats')
-                .insert([{
-                    link_id: parseInt(link_id),
-                    user_id: parseInt(user_id),
-                    stat_date: stat_date,
-                    clicks: newClicks,
-                    installs: newInstalls
-                }]);
+            await supabase.from('daily_stats').insert([{ link_id: parseInt(link_id), user_id: parseInt(user_id), stat_date: stat_date, clicks: newClicks, installs: newInstalls }]);
         }
 
-        const { data: allStats, error: sumErr } = await supabase
-            .from('daily_stats')
-            .select('clicks, installs')
-            .eq('link_id', link_id);
-
-        if (!sumErr && allStats) {
-            let totalLinkClicks = 0;
-            let totalLinkInstalls = 0;
-
+        const { data: allStats } = await supabase.from('daily_stats').select('clicks, installs').eq('link_id', link_id);
+        if (allStats) {
+            let totalLinkClicks = 0, totalLinkInstalls = 0;
             allStats.forEach(s => {
                 totalLinkClicks += (s.clicks || 0);
                 totalLinkInstalls += (s.installs || 0);
             });
-
-            await supabase
-                .from('links')
-                .update({ 
-                    clicks: totalLinkClicks, 
-                    installs: totalLinkInstalls 
-                })
-                .eq('id', link_id);
+            await supabase.from('links').update({ clicks: totalLinkClicks, installs: totalLinkInstalls }).eq('id', link_id);
         }
 
         res.json({ success: true, message: 'Daily stats updated successfully!' });
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
+    } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
 if (process.env.NODE_ENV !== 'production') {

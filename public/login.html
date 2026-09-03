@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Nemonics Control Hub</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -47,7 +46,7 @@
         .animate-float-logo {
             animation: floatLogo 4s ease-in-out infinite;
         }
-        /* Rotating Laser Beam Line */
+        /* Card ke piche ghumne wali real moving laser beam line */
         @keyframes rotateBeam {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -119,16 +118,16 @@
 
                 <form onsubmit="handleLogin(event)" class="space-y-5">
                     <div>
-                        <label class="block text-[11px] font-bold uppercase tracking-wider text-cyan-400/80 mb-2">Gmail ID</label>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-cyan-400/80 mb-2">Username</label>
                         <div class="relative">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 text-sm">✉️</span>
-                            <input type="email" id="email" placeholder="user@gmail.com" required 
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 text-sm">👤</span>
+                            <input type="text" id="username" placeholder="Enter your username" required 
                                 class="w-full bg-slate-900/60 border border-slate-800 rounded-2xl pl-11 pr-4 py-3.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:bg-slate-900 focus:ring-2 focus:ring-cyan-500/25 transition-all text-sm font-medium">
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-[11px] foundational text-[11px] font-bold uppercase tracking-wider text-cyan-400/80 mb-2">Password</label>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-cyan-400/80 mb-2">Password</label>
                         <div class="relative">
                             <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 text-sm">🔒</span>
                             <input type="password" id="password" placeholder="••••••••••••" required 
@@ -157,7 +156,7 @@
     <script>
         async function handleLogin(e) {
             e.preventDefault();
-            const email = document.getElementById('email').value.trim();
+            const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             const errorDiv = document.getElementById('errorMessage');
             const submitBtn = document.getElementById('submitBtn');
@@ -167,11 +166,10 @@
             submitBtn.disabled = true;
 
             try {
-                // Backend ko ab email aur password bheja jayega
                 const res = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify({ username, password })
                 });
 
                 const data = await res.json();
@@ -183,7 +181,7 @@
                         window.location.href = '/user';
                     }
                 } else {
-                    errorDiv.textContent = data.error || 'Invalid Gmail or password. Please try again.';
+                    errorDiv.textContent = data.error || 'Invalid credentials. Please try again.';
                     errorDiv.classList.remove('hidden');
                     submitBtn.textContent = 'Login Now';
                     submitBtn.disabled = false;

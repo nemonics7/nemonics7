@@ -525,12 +525,14 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
     }
 });
 
-// --- SHORT URL REDIRECT ROUTE ---
+// --- SHORT URL REDIRECT ROUTE WITH UNIQUE CLICKS ---
 app.get('/s/:shortCode', async (req, res) => {
     try {
         const shortCode = req.params.shortCode;
         const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+        const todayStr = getTodayIST();
 
+        // 1. Link dhoondhein
         const { data: link, error: linkErr } = await supabase
           .from('links')
           .select('*')
@@ -543,37 +545,53 @@ app.get('/s/:shortCode', async (req, res) => {
 
         const targetUrl = link.target_url.trim();
 
-        await supabase.from('link_clicks').insert([{ link_id: link.id, ip_address: clientIp }]);
-        await supabase.from('links').update({ clicks: (link.clicks || 0) + 1 }).eq('id', link.id);
-
-        const todayStr = getTodayIST();
-
-        const { data: existingDaily } = await supabase
-            .from('daily_stats')
-            .select('id, clicks')
+        // 2. Check karein ki kya is IP ne aaj is link par pehle click kiya hai ya nahi
+        const { data: existingClick } = await supabase
+            .from('link_clicks')
+            .select('id')
             .eq('link_id', link.id)
-            .eq('stat_date', todayStr)
+            .eq('ip_address', clientIp)
+            .gte('created_at', `${todayStr}T00:00:00`)
             .maybeSingle();
 
-        if (existingDaily) {
-            await supabase
+        // 3. Agar aaj pehli baar click kiya hai, tabhi clicks count aur database update honge
+        if (!existingClick) {
+            // IP record save karein link_clicks table mein
+            await supabase.from('link_clicks').insert([{ link_id: link.id, ip_address: clientIp }]);
+
+            // Total clicks badhayein links table mein
+            await supabase.from('links').update({ clicks: (link.clicks || 0) + 1 }).eq('id', link.id);
+
+            // Daily stats update ya insert karein
+            const { data: existingDaily } = await supabase
                 .from('daily_stats')
-                .update({ clicks: (existingDaily.clicks || 0) + 1 })
-                .eq('id', existingDaily.id);
-        } else {
-            await supabase
-                .from('daily_stats')
-                .insert([{
-                    link_id: link.id,
-                    user_id: link.user_id,
-                    clicks: 1,
-                    installs: 0,
-                    stat_date: todayStr
-                }]);
+                .select('id, clicks')
+                .eq('link_id', link.id)
+                .eq('stat_date', todayStr)
+                .maybeSingle();
+
+            if (existingDaily) {
+                await supabase
+                    .from('daily_stats')
+                    .update({ clicks: (existingDaily.clicks || 0) + 1 })
+                    .eq('id', existingDaily.id);
+            } else {
+                await supabase
+                    .from('daily_stats')
+                    .insert([{
+                        link_id: link.id,
+                        user_id: link.user_id,
+                        clicks: 1,
+                        installs: 0,
+                        stat_date: todayStr
+                    }]);
+            }
         }
 
+        // 4. Chahe unique ho ya duplicate click, user target URL par redirect ho jayega
         return res.redirect(targetUrl);
     } catch (err) {
+        console.error("Redirect error:", err);
         res.status(500).send('Server Error');
     }
 });

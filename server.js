@@ -82,55 +82,10 @@ app.get('/api/me', isAuthenticated, async (req, res) => {
     res.json(req.session.user);
 });
 
-// --- NEW DRIP INCREMENT ADMIN & USER APIS ---
-
-// 1. Admin API: Drip queue start karne ke liye
-app.post('/api/admin/update-downloads', isAdmin, async (req, res) => {
-    try {
-        const { userId, addedDownloads, durationInSeconds } = req.body;
-
-        if (!userId || !addedDownloads) {
-            return res.status(400).json({ success: false, error: "User ID aur Downloads zaroori hain!" });
-        }
-
-        const { data: user, error: fetchError } = await supabase
-            .from('users')
-            .select('downloads')
-            .eq('id', userId)
-            .single();
-
-        if (fetchError || !user) {
-            return res.status(404).json({ success: false, error: "User nahi mila!" });
-        }
-
-        const currentDownloads = Number(user.downloads || 0);
-        const newTargetDownloads = currentDownloads + Number(addedDownloads);
-        const duration = Number(durationInSeconds) || 60;
-
-        const { error: updateError } = await supabase
-            .from('users')
-            .update({ 
-                target_downloads: newTargetDownloads,
-                increment_duration: duration 
-            })
-            .eq('id', userId);
-
-        if (updateError) {
-            return res.status(500).json({ success: false, error: updateError.message });
-        }
-
-        res.json({ success: true, message: "Drip increment queue started successfully!" });
-    } catch (err) {
-        console.error("Drip update error:", err);
-        res.status(500).json({ success: false, error: "Server error" });
-    }
-});
-
-// 2. User Stats API: User dashboard ke liye live data aur target fetch karne ke liye
+// --- USER STATS & SYNC APIS (For Drip Animation) ---
 app.get('/api/user-stats/:userId', isAuthenticated, async (req, res) => {
     try {
         const userId = req.params.userId;
-
         const { data: user, error } = await supabase
             .from('users')
             .select('downloads, target_downloads, increment_duration')
@@ -148,16 +103,13 @@ app.get('/api/user-stats/:userId', isAuthenticated, async (req, res) => {
             duration: Number(user.increment_duration || 60)
         });
     } catch (err) {
-        console.error("Fetch user stats error:", err);
         res.status(500).json({ success: false, error: "Server error" });
     }
 });
 
-// 3. Sync API: Animation poori hone ke baad actual downloads ko database mein save karne ke liye
 app.post('/api/user/sync-downloads', isAuthenticated, async (req, res) => {
     try {
         const { userId, finalDownloads } = req.body;
-
         const { error } = await supabase
             .from('users')
             .update({ 
@@ -173,7 +125,7 @@ app.post('/api/user/sync-downloads', isAuthenticated, async (req, res) => {
     }
 });
 
-// --- EXISTING ROUTES ---
+// --- EXISTING ADMIN & USER ROUTES ---
 
 app.get('/api/admin/users', isAdmin, async (req, res) => {
     try {
@@ -487,11 +439,65 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
     }
 });
 
+// --- UPDATED ADJUST-STATS API (Handles both Link Stats & User Drip Duration) ---
 app.post('/api/admin/adjust-stats', isAdmin, async (req, res) => {
-    const { link_id, clicks, installs } = req.body;
-    const { error } = await supabase.from('links').update({ clicks: parseInt(clicks), installs: parseInt(installs) }).eq('id', link_id);
-    if (error) return res.status(500).json({ error: error.message });
-    res.json({ success: true });
+    const { link_id, clicks, installs, userId, addedDownloads, durationInSeconds } = req.body;
+
+    // Agar request user downloads / drip increment ke liye hai
+    if (userId || addedDownloads !== undefined) {
+        const targetUserId = userId || req.body.user_id;
+        const downloadsToAdd = addedDownloads !== undefined ? addedDownloads : installs;
+        const duration = parseInt(durationInSeconds) || 60;
+
+        try {
+            if (!targetUserId) {
+                return res.status(400).json({ success: false, error: "User ID missing hai!" });
+            }
+
+            const { data: user, error: fetchError } = await supabase
+                .from('users')
+                .select('downloads')
+                .eq('id', targetUserId)
+                .single();
+
+            if (fetchError || !user) {
+                return res.status(404).json({ success: false, error: "User nahi mila!" });
+            }
+
+            const currentDownloads = Number(user.downloads || 0);
+            const newTargetDownloads = currentDownloads + Number(downloadsToAdd);
+
+            const { error: updateError } = await supabase
+                .from('users')
+                .update({ 
+                    target_downloads: newTargetDownloads,
+                    increment_duration: duration 
+                })
+                .eq('id', targetUserId);
+
+            if (updateError) {
+                return res.status(500).json({ success: false, error: updateError.message });
+            }
+
+            return res.json({ success: true, message: "Drip increment started successfully!" });
+        } catch (err) {
+            console.error("Drip adjust stats error:", err);
+            return res.status(500).json({ success: false, error: 'Server error' });
+        }
+    }
+
+    // Purana Link Stats Adjust karne ka logic (agar link_id pass ho)
+    try {
+        const { error } = await supabase
+            .from('links')
+            .update({ clicks: parseInt(clicks), installs: parseInt(installs) })
+            .eq('id', link_id);
+
+        if (error) return res.status(500).json({ error: error.message });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
 });
 
 app.post('/api/admin/delete-link', isAdmin, async (req, res) => {

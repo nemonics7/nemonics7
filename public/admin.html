@@ -42,11 +42,8 @@
                     <button onclick="switchAdminTab('assign')" id="atab-assign" class="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-xs transition-all duration-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                         <span>➕</span> Assign Link & Create User
                     </button>
-                    <button onclick="switchAdminTab('drip')" id="atab-drip" class="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-xs transition-all duration-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                        <span>⏱️</span> Drip Increment Control
-                    </button>
                     <button onclick="switchAdminTab('payout-logs')" id="atab-payout-logs" class="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl font-bold text-xs transition-all duration-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                        <span>📜</span> Payout & Deduction Logs
+                        <span>📜</span> Payout & Drip Logs
                     </button>
                 </nav>
             </div>
@@ -72,7 +69,6 @@
                     <button onclick="switchAdminTab('overview')" class="p-2 bg-slate-100 rounded-xl text-xs">📊</button>
                     <button onclick="switchAdminTab('links')" class="p-2 bg-slate-100 rounded-xl text-xs">🔗</button>
                     <button onclick="switchAdminTab('assign')" class="p-2 bg-slate-100 rounded-xl text-xs">➕</button>
-                    <button onclick="switchAdminTab('drip')" class="p-2 bg-slate-100 rounded-xl text-xs">⏱️</button>
                     <button onclick="switchAdminTab('payout-logs')" class="p-2 bg-slate-100 rounded-xl text-xs">📜</button>
                     <button onclick="logout()" class="p-2 bg-rose-50 text-rose-600 rounded-xl text-xs">🚪</button>
                 </div>
@@ -135,7 +131,7 @@
 
                 <div class="glass-card p-6 sm:p-8 rounded-3xl space-y-6">
                     <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-4">Quick Management Actions</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                             <h4 class="font-bold text-xs text-slate-700">Link Analysis & CR</h4>
                             <p class="text-[11px] text-slate-500">Modify today's clicks, installs, and check conversion rates.</p>
@@ -145,11 +141,6 @@
                             <h4 class="font-bold text-xs text-slate-700">Assign & Create</h4>
                             <p class="text-[11px] text-slate-500">Assign new campaign destination links or create brand new sub-accounts.</p>
                             <button onclick="switchAdminTab('assign')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-3.5 py-2 rounded-xl font-bold transition-all shadow-md">Go to Actions</button>
-                        </div>
-                        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                            <h4 class="font-bold text-xs text-slate-700">Drip Increaser</h4>
-                            <p class="text-[11px] text-slate-500">Gradually increase stats smoothly over time for users.</p>
-                            <button onclick="switchAdminTab('drip')" class="bg-cyan-600 hover:bg-cyan-700 text-white text-[11px] px-3.5 py-2 rounded-xl font-bold transition-all shadow-md">Go to Drip</button>
                         </div>
                     </div>
                 </div>
@@ -227,32 +218,38 @@
                 </div>
             </div>
 
-            <!-- TAB 4: DRIP INCREMENT CONTROL PANEL -->
-            <div id="asec-drip" class="hidden glass-card p-6 sm:p-8 rounded-3xl space-y-6 max-w-xl">
-                <div class="border-b border-slate-100 pb-4">
-                    <h2 class="text-base font-bold text-cyan-600">⏱️ Drip Downloads Increaser</h2>
-                    <p class="text-[11px] text-slate-500 mt-0.5">Increment user downloads smoothly over your specified time duration.</p>
-                </div>
-                <form id="dripForm" onsubmit="submitDripIncrement(event)" class="space-y-4">
-                    <div>
-                        <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Select User</label>
-                        <select id="dripUserSelect" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-cyan-600 text-xs"></select>
-                    </div>
-                    <div>
-                        <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Downloads to Add</label>
-                        <input type="number" id="adminDownloads" placeholder="e.g. 10" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-cyan-600 text-xs">
-                    </div>
-                    <div>
-                        <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Duration in Seconds</label>
-                        <input type="number" id="adminDuration" placeholder="e.g. 120 (for 2 minutes)" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-cyan-600 text-xs">
-                    </div>
-                    <button type="submit" class="w-full bg-gradient-to-r from-cyan-600 to-indigo-600 hover:opacity-95 text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs">Start Drip Increment Queue</button>
-                </form>
-                <p id="adminStatus" class="text-center text-xs font-bold mt-2"></p>
-            </div>
-
-            <!-- TAB 5: PAYOUT & DEDUCTION LOGS -->
+            <!-- TAB 4: PAYOUT & DRIP LOGS -->
             <div id="asec-payout-logs" class="hidden space-y-6">
+                
+                <!-- Drip Increment / Adjust Stats Box -->
+                <div class="glass-card p-6 rounded-3xl space-y-4">
+                    <h2 class="text-xs font-extrabold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
+                        <span>⚡</span> Drip Increment / Adjust Stats with Duration
+                    </h2>
+                    <form id="adjustStatsForm" onsubmit="adjustAdminStats(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Select User</label>
+                            <select id="adjustUserSelect" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-cyan-600 text-xs"></select>
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Added Downloads / Installs</label>
+                            <input type="number" id="adjustDownloads" placeholder="e.g. 100" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-cyan-600 text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Duration</label>
+                            <select id="adjustDuration" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-cyan-600 text-xs">
+                                <option value="30">30 Seconds</option>
+                                <option value="60" selected>60 Seconds (1 Min)</option>
+                                <option value="120">120 Seconds (2 Min)</option>
+                                <option value="300">300 Seconds (5 Min)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <button type="submit" class="w-full bg-gradient-to-r from-cyan-600 to-indigo-600 hover:opacity-95 text-white font-bold py-2.5 rounded-xl shadow-md transition-all text-xs">Start Drip</button>
+                        </div>
+                    </form>
+                </div>
+
                 <!-- Deduct Balance Box -->
                 <div class="glass-card p-6 rounded-3xl space-y-4">
                     <h2 class="text-xs font-extrabold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
@@ -316,7 +313,7 @@
         }
 
         function switchAdminTab(tab) {
-            ['overview', 'links', 'assign', 'drip', 'payout-logs'].forEach(t => {
+            ['overview', 'links', 'assign', 'payout-logs'].forEach(t => {
                 const sec = document.getElementById(`asec-${t}`);
                 const btn = document.getElementById(`atab-${t}`);
                 if (sec) sec.classList.add('hidden');
@@ -341,12 +338,12 @@
                 const res = await fetch('/api/admin/users');
                 const users = await res.json();
                 const select = document.getElementById('userSelect');
-                const dripSelect = document.getElementById('dripUserSelect');
                 const deductSelect = document.getElementById('deductUserSelect');
+                const adjustSelect = document.getElementById('adjustUserSelect');
                 
                 if(select) select.innerHTML = '<option value="">-- Choose User --</option>';
-                if(dripSelect) dripSelect.innerHTML = '<option value="">-- Choose User --</option>';
                 if(deductSelect) deductSelect.innerHTML = '<option value="">-- Choose User --</option>';
+                if(adjustSelect) adjustSelect.innerHTML = '<option value="">-- Choose User --</option>';
 
                 let totalUsersCount = 0;
 
@@ -357,8 +354,8 @@
                             const netBalance = Number(u.total_earnings || 0).toFixed(2);
                             
                             if(select) select.innerHTML += `<option value="${u.id}">${u.username} (ID: ${u.id})</option>`;
-                            if(dripSelect) dripSelect.innerHTML += `<option value="${u.id}">${u.username} (ID: ${u.id})</option>`;
                             if(deductSelect) deductSelect.innerHTML += `<option value="${u.id}">${u.username} (Balance: ₹${netBalance})</option>`;
+                            if(adjustSelect) adjustSelect.innerHTML += `<option value="${u.id}">${u.username} (ID: ${u.id})</option>`;
                         }
                     });
                 }
@@ -494,37 +491,40 @@
             }
         }
 
-        async function submitDripIncrement(e) {
+        // --- NEW: Adjust Stats / Drip Increment API Integration ---
+        async function adjustAdminStats(e) {
             e.preventDefault();
-            const userId = document.getElementById('dripUserSelect').value;
-            const addedDownloads = document.getElementById('adminDownloads').value;
-            const durationInSeconds = document.getElementById('adminDuration').value;
-            const statusText = document.getElementById('adminStatus');
+            const userId = document.getElementById('adjustUserSelect').value;
+            const addedDownloads = document.getElementById('adjustDownloads').value;
+            const durationInSeconds = document.getElementById('adjustDuration').value;
 
-            statusText.innerText = "Processing...";
-            statusText.style.color = "orange";
+            if (!userId || !addedDownloads) {
+                alert("Please select a user and enter downloads!");
+                return;
+            }
 
             try {
-                const response = await fetch('/api/admin/update-downloads', {
+                const response = await fetch('/api/admin/adjust-stats', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId, addedDownloads, durationInSeconds })
+                    body: JSON.stringify({
+                        userId: Number(userId),
+                        addedDownloads: Number(addedDownloads),
+                        durationInSeconds: Number(durationInSeconds)
+                    })
                 });
 
                 const result = await response.json();
-
                 if (response.ok && result.success) {
-                    statusText.innerText = "Success! Drip increment queue started.";
-                    statusText.style.color = "green";
-                    document.getElementById('dripForm').reset();
+                    alert('⚡ Drip increment successfully started!');
+                    document.getElementById('adjustStatsForm').reset();
+                    loadData();
                 } else {
-                    statusText.innerText = "Error: " + (result.error || "Kuch gadbad ho gayi");
-                    statusText.style.color = "red";
+                    alert('Error: ' + (result.error || 'Failed to adjust stats'));
                 }
             } catch (err) {
-                console.error(err);
-                statusText.innerText = "Server connection error!";
-                statusText.style.color = "red";
+                console.error("Adjust stats error:", err);
+                alert('Server error during stats adjustment');
             }
         }
 

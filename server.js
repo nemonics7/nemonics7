@@ -82,51 +82,6 @@ app.get('/api/me', isAuthenticated, async (req, res) => {
     res.json(req.session.user);
 });
 
-// --- USER STATS & SYNC APIS (For Drip Animation) ---
-app.get('/api/user-stats/:userId', isAuthenticated, async (req, res) => {
-    try {
-        const userId = req.params.userId;
-        const { data: user, error } = await supabase
-            .from('users')
-            .select('downloads, target_downloads, increment_duration')
-            .eq('id', userId)
-            .single();
-
-        if (error || !user) {
-            return res.status(404).json({ success: false, error: "Stats not found" });
-        }
-
-        res.json({
-            success: true,
-            currentDownloads: Number(user.downloads || 0),
-            targetDownloads: Number(user.target_downloads || user.downloads || 0),
-            duration: Number(user.increment_duration || 60)
-        });
-    } catch (err) {
-        res.status(500).json({ success: false, error: "Server error" });
-    }
-});
-
-app.post('/api/user/sync-downloads', isAuthenticated, async (req, res) => {
-    try {
-        const { userId, finalDownloads } = req.body;
-        const { error } = await supabase
-            .from('users')
-            .update({ 
-                downloads: finalDownloads,
-                target_downloads: finalDownloads 
-            })
-            .eq('id', userId);
-
-        if (error) return res.status(500).json({ success: false, error: error.message });
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ success: false, error: "Sync error" });
-    }
-});
-
-// --- EXISTING ADMIN & USER ROUTES ---
-
 app.get('/api/admin/users', isAdmin, async (req, res) => {
     try {
         const { data: users, error } = await supabase.from('users').select('id, username, role, rate_per_install');
@@ -224,6 +179,7 @@ app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
     }
 });
 
+// --- UPDATED DEDUCT ROUTE: CHECKS IF USER HAS ENOUGH BALANCE BEFORE DEDUCTING ---
 app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
     const userId = req.params.userId;
     const amount_deducted = req.body.amount_deducted || req.body.amount || req.body.deduction;
@@ -235,6 +191,7 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             return res.status(400).json({ error: 'Invalid deduction amount' });
         }
 
+        // 1. User ki links aur installs se total earnings nikalna
         const { data: links, error: linkErr } = await supabase
             .from('links')
             .select('*')
@@ -265,6 +222,7 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             }
         }
 
+        // 2. Ab tak ke saare payouts/deductions minus karna
         const { data: userLogs } = await supabase
             .from('payout_logs')
             .select('amount')
@@ -277,14 +235,17 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             });
         }
 
+        // 3. Available Net Balance calculate karna
         const availableBalance = Math.max(0, totalEarnings - totalDeductionsOrPaid);
 
+        // 4. Check karna ki amount available balance se zyada toh nahi
         if (numAmount > availableBalance) {
             return res.status(400).json({ 
                 error: `Cannot deduct ₹${numAmount}. User only has available balance of ₹${availableBalance.toFixed(2)}!` 
             });
         }
 
+        // 5. Agar balance sahi hai, tabhi payout_logs mein entry save hogi
         const { error: logErr } = await supabase.from('payout_logs').insert([{
             user_id: parseInt(userId),
             amount: -Math.abs(numAmount),
@@ -390,19 +351,22 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
         const userMap = {};
         if (users) users.forEach(u => { userMap[u.id] = u.username; });
 
+        // Saare daily stats fetch karein link_id ke sath
         const { data: allDailyStats } = await supabase.from('daily_stats').select('link_id, stat_date, clicks, installs');
         
         const totalsMap = {};
-        const fullDailyStatsMap = {};
+        const fullDailyStatsMap = {}; // Har link ke saare daily stats store karne ke liye
 
         if (allDailyStats) {
             allDailyStats.forEach(d => {
+                // Total calculation map
                 if (!totalsMap[d.link_id]) {
                     totalsMap[d.link_id] = { clicks: 0, installs: 0 };
                 }
                 totalsMap[d.link_id].clicks += (d.clicks || 0);
                 totalsMap[d.link_id].installs += (d.installs || 0);
 
+                // Full daily stats array map per link
                 if (!fullDailyStatsMap[d.link_id]) {
                     fullDailyStatsMap[d.link_id] = [];
                 }
@@ -428,7 +392,7 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
                 username: userMap[link.user_id] || 'Unassigned',
                 today_clicks: dailyMap[link.id] ? dailyMap[link.id].clicks : 0,
                 today_installs: dailyMap[link.id] ? dailyMap[link.id].installs : 0,
-                daily_stats: fullDailyStatsMap[link.id] || []
+                daily_stats: fullDailyStatsMap[link.id] || [] // 👈 Yeh line zaroori hai frontend ke liye
             };
         });
 
@@ -439,65 +403,11 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
     }
 });
 
-// --- UPDATED ADJUST-STATS API (Handles both Link Stats & User Drip Duration) ---
 app.post('/api/admin/adjust-stats', isAdmin, async (req, res) => {
-    const { link_id, clicks, installs, userId, addedDownloads, durationInSeconds } = req.body;
-
-    // Agar request user downloads / drip increment ke liye hai
-    if (userId || addedDownloads !== undefined) {
-        const targetUserId = userId || req.body.user_id;
-        const downloadsToAdd = addedDownloads !== undefined ? addedDownloads : installs;
-        const duration = parseInt(durationInSeconds) || 60;
-
-        try {
-            if (!targetUserId) {
-                return res.status(400).json({ success: false, error: "User ID missing hai!" });
-            }
-
-            const { data: user, error: fetchError } = await supabase
-                .from('users')
-                .select('downloads')
-                .eq('id', targetUserId)
-                .single();
-
-            if (fetchError || !user) {
-                return res.status(404).json({ success: false, error: "User nahi mila!" });
-            }
-
-            const currentDownloads = Number(user.downloads || 0);
-            const newTargetDownloads = currentDownloads + Number(downloadsToAdd);
-
-            const { error: updateError } = await supabase
-                .from('users')
-                .update({ 
-                    target_downloads: newTargetDownloads,
-                    increment_duration: duration 
-                })
-                .eq('id', targetUserId);
-
-            if (updateError) {
-                return res.status(500).json({ success: false, error: updateError.message });
-            }
-
-            return res.json({ success: true, message: "Drip increment started successfully!" });
-        } catch (err) {
-            console.error("Drip adjust stats error:", err);
-            return res.status(500).json({ success: false, error: 'Server error' });
-        }
-    }
-
-    // Purana Link Stats Adjust karne ka logic (agar link_id pass ho)
-    try {
-        const { error } = await supabase
-            .from('links')
-            .update({ clicks: parseInt(clicks), installs: parseInt(installs) })
-            .eq('id', link_id);
-
-        if (error) return res.status(500).json({ error: error.message });
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
+    const { link_id, clicks, installs } = req.body;
+    const { error } = await supabase.from('links').update({ clicks: parseInt(clicks), installs: parseInt(installs) }).eq('id', link_id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
 });
 
 app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
@@ -511,6 +421,7 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     }
 });
 
+// --- USER LINKS API: PURE ANALYTICS (NO DEDUCTION SUBTRACTION IN STATS) ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     let { startDate, endDate } = req.query;
@@ -614,12 +525,14 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
     }
 });
 
+// --- SHORT URL REDIRECT ROUTE WITH UNIQUE CLICKS ---
 app.get('/s/:shortCode', async (req, res) => {
     try {
         const shortCode = req.params.shortCode;
         const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
         const todayStr = getTodayIST();
 
+        // 1. Link dhoondhein
         const { data: link, error: linkErr } = await supabase
           .from('links')
           .select('*')
@@ -632,6 +545,7 @@ app.get('/s/:shortCode', async (req, res) => {
 
         const targetUrl = link.target_url.trim();
 
+        // 2. Check karein ki kya is IP ne aaj is link par pehle click kiya hai ya nahi
         const { data: existingClick } = await supabase
             .from('link_clicks')
             .select('id')
@@ -640,10 +554,15 @@ app.get('/s/:shortCode', async (req, res) => {
             .gte('created_at', `${todayStr}T00:00:00`)
             .maybeSingle();
 
+        // 3. Agar aaj pehli baar click kiya hai, tabhi clicks count aur database update honge
         if (!existingClick) {
+            // IP record save karein link_clicks table mein
             await supabase.from('link_clicks').insert([{ link_id: link.id, ip_address: clientIp }]);
+
+            // Total clicks badhayein links table mein
             await supabase.from('links').update({ clicks: (link.clicks || 0) + 1 }).eq('id', link.id);
 
+            // Daily stats update ya insert karein
             const { data: existingDaily } = await supabase
                 .from('daily_stats')
                 .select('id, clicks')
@@ -669,6 +588,7 @@ app.get('/s/:shortCode', async (req, res) => {
             }
         }
 
+        // 4. Chahe unique ho ya duplicate click, user target URL par redirect ho jayega
         return res.redirect(targetUrl);
     } catch (err) {
         console.error("Redirect error:", err);

@@ -162,7 +162,7 @@
                                 <th class="p-3">User</th>
                                 <th class="p-3">Link / URL</th>
                                 <th class="p-3 text-center">Today's Stats</th>
-                                <th class="p-3 text-center">Date-Wise Daily Edit</th>
+                                <th class="p-3 text-center">Gradual / Daily Edit</th>
                                 <th class="p-3 text-center">Rate / Install</th>
                                 <th class="p-3 text-center">CR</th>
                                 <th class="p-3 text-center">Action</th>
@@ -321,10 +321,7 @@
                             totalUsersCount++;
                             const netBalance = Number(u.total_earnings || 0).toFixed(2);
                             
-                            // 1. Assign Link ke liye sirf normal username (bina balance ke)
                             if(select) select.innerHTML += `<option value="${u.id}">${u.username} (ID: ${u.id})</option>`;
-                            
-                            // 2. Deduct Balance ke liye username ke sath balance
                             if(deductSelect) deductSelect.innerHTML += `<option value="${u.id}">${u.username} (Balance: ₹${netBalance})</option>`;
                         }
                     });
@@ -333,97 +330,100 @@
             } catch (err) { console.error("Error loading users:", err); }
         }
 
-async function loadAllLinks() {
-    try {
-        let totalDeductions = 0;
-        try {
-            const logsRes = await fetch('/api/admin/payout-logs');
-            const logs = await logsRes.json();
-            if (Array.isArray(logs)) {
-                logs.forEach(log => {
-                    totalDeductions += Math.abs(Number(log.amount) || 0);
-                });
-            }
-        } catch (e) {
-            console.error("Could not fetch logs", e);
-        }
-
-        const res = await fetch('/api/admin/all-links');
-        const links = await res.json();
-        const tbody = document.getElementById('adminLinksTableBody');
-        if(tbody) tbody.innerHTML = '';
-
-        let activeLinksCount = 0;
-        let totalClicksCount = 0;
-        let totalInstallsCount = 0;
-        let grossEarningsSum = 0;
-
-        // Local date format YYYY-MM-DD
-        const todayStr = new Date().toISOString().split('T')[0];
-
-        if (links && links.length > 0) {
-            activeLinksCount = links.length;
-            links.forEach(link => {
-                const totalClicks = Number(link.clicks || 0);
-                const totalInstalls = Number(link.installs || 0);
-                const rate = Number(link.rate_per_install || 0);
-                
-                totalClicksCount += totalClicks;
-                totalInstallsCount += totalInstalls;
-                grossEarningsSum += (totalInstalls * rate);
-
-                // Backend se direct aane wale today_clicks aur today_installs ka use karein
-                const todayClicks = Number(link.today_clicks || 0);
-                const todayInstalls = Number(link.today_installs || 0);
-
-                const cr = totalClicks > 0 ? ((totalInstalls / totalClicks) * 100).toFixed(1) : 0;
-                
-                if(tbody) {
-                    tbody.innerHTML += `
-                        <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
-                            <td class="p-3 font-bold text-indigo-600">${link.username || 'Unassigned'}</td>
-                            <td class="p-3">
-                                <div class="font-bold text-slate-800">${link.link_name || 'Link'}</div>
-                                <a href="${link.target_url}" target="_blank" class="text-[10px] text-cyan-600 hover:underline truncate block max-w-[140px] font-mono">${link.target_url}</a>
-                            </td>
-                            <td class="p-3 text-center">
-                                <span class="text-[10px] text-slate-600 font-bold block">Clicks: ${todayClicks}</span>
-                                <span class="text-[10px] text-slate-600 font-bold block">Installs: ${todayInstalls}</span>
-                                <span class="text-[9px] text-slate-400 block mt-0.5">(${todayStr})</span>
-                            </td>
-                            <td class="p-3 text-center bg-slate-50/50 rounded-xl">
-                                <div class="flex flex-col gap-1.5 items-center">
-                                    <input type="date" id="statDate_${link.id}" value="${todayStr}" class="bg-white border border-slate-200 rounded p-1 text-[10px] font-bold">
-                                    <div class="flex gap-1">
-                                        <input type="number" id="clicksInput_${link.id}" value="${todayClicks}" placeholder="Clicks" class="w-14 bg-white border border-slate-200 text-center rounded p-1 text-[10px]">
-                                        <input type="number" id="installsInput_${link.id}" value="${todayInstalls}" placeholder="Installs" class="w-14 bg-white border border-slate-200 text-center rounded p-1 text-[10px]">
-                                    </div>
-                                    <button onclick="saveDailyStats(${link.id}, ${link.user_id})" class="bg-cyan-600 hover:bg-cyan-700 text-white text-[9px] px-2 py-1 rounded font-bold shadow-sm w-full">Save Daily</button>
-                                </div>
-                            </td>
-                            <td class="p-3 text-center"><input type="number" id="link_rate_${link.id}" value="${rate.toFixed(2)}" step="0.01" class="w-16 bg-slate-50 border border-slate-200 text-center rounded-lg p-1 text-emerald-600 font-bold text-xs"></td>
-                            <td class="p-3 text-center font-extrabold text-cyan-600">${cr}%</td>
-                            <td class="p-3 text-center">
-                                <div class="flex items-center justify-center gap-1">
-                                    <button onclick="updateLinkRate(${link.id})" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] px-2 py-1 rounded-lg font-bold shadow-sm">Rate</button>
-                                    <button onclick="deleteLink(${link.id})" class="bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white text-[10px] px-2 py-1 rounded-lg font-bold">🗑️</button>
-                                </div>
-                            </td>
-                        </tr>`;
+        async function loadAllLinks() {
+            try {
+                let totalDeductions = 0;
+                try {
+                    const logsRes = await fetch('/api/admin/payout-logs');
+                    const logs = await logsRes.json();
+                    if (Array.isArray(logs)) {
+                        logs.forEach(log => {
+                            totalDeductions += Math.abs(Number(log.amount) || 0);
+                        });
+                    }
+                } catch (e) {
+                    console.error("Could not fetch logs", e);
                 }
-            });
-        } else {
-            if(tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-slate-400">No links found.</td></tr>`;
+
+                const res = await fetch('/api/admin/all-links');
+                const links = await res.json();
+                const tbody = document.getElementById('adminLinksTableBody');
+                if(tbody) tbody.innerHTML = '';
+
+                let activeLinksCount = 0;
+                let totalClicksCount = 0;
+                let totalInstallsCount = 0;
+                let grossEarningsSum = 0;
+
+                const todayStr = new Date().toISOString().split('T')[0];
+
+                if (links && links.length > 0) {
+                    activeLinksCount = links.length;
+                    links.forEach(link => {
+                        const totalClicks = Number(link.clicks || 0);
+                        const totalInstalls = Number(link.installs || 0);
+                        const rate = Number(link.rate_per_install || 0);
+                        
+                        totalClicksCount += totalClicks;
+                        totalInstallsCount += totalInstalls;
+                        grossEarningsSum += (totalInstalls * rate);
+
+                        const todayClicks = Number(link.today_clicks || 0);
+                        const todayInstalls = Number(link.today_installs || 0);
+
+                        const cr = totalClicks > 0 ? ((totalInstalls / totalClicks) * 100).toFixed(1) : 0;
+                        
+                        if(tbody) {
+                            tbody.innerHTML += `
+                                <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
+                                    <td class="p-3 font-bold text-indigo-600">${link.username || 'Unassigned'}</td>
+                                    <td class="p-3">
+                                        <div class="font-bold text-slate-800">${link.link_name || 'Link'}</div>
+                                        <a href="${link.target_url}" target="_blank" class="text-[10px] text-cyan-600 hover:underline truncate block max-w-[140px] font-mono">${link.target_url}</a>
+                                    </td>
+                                    <td class="p-3 text-center">
+                                        <span class="text-[10px] text-slate-600 font-bold block">Clicks: ${todayClicks}</span>
+                                        <span class="text-[10px] text-slate-600 font-bold block">Installs: ${todayInstalls}</span>
+                                        <span class="text-[9px] text-slate-400 block mt-0.5">(${todayStr})</span>
+                                    </td>
+                                    <td class="p-3 text-center bg-slate-50/50 rounded-xl">
+                                        <div class="flex flex-col gap-1.5 items-center">
+                                            <input type="date" id="statDate_${link.id}" value="${todayStr}" class="hidden">
+                                            <div class="flex gap-1">
+                                                <input type="number" id="clicksInput_${link.id}" value="${todayClicks}" placeholder="Clicks" class="w-14 bg-white border border-slate-200 text-center rounded p-1 text-[10px]">
+                                                <input type="number" id="installsInput_${link.id}" value="${todayInstalls}" placeholder="Installs" class="w-14 bg-white border border-slate-200 text-center rounded p-1 text-[10px]">
+                                            </div>
+                                            <!-- Gradual Time Control Inputs -->
+                                            <div class="flex gap-1 items-center">
+                                                <input type="number" id="duration_${link.id}" placeholder="Mins" title="Duration in minutes for gradual increase" class="w-16 bg-white border border-indigo-200 text-center rounded p-1 text-[10px]" value="0">
+                                                <button onclick="saveGradualStats(${link.id}, ${link.user_id})" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[9px] px-2 py-1 rounded font-bold shadow-sm">Boost Gradual</button>
+                                            </div>
+                                            <button onclick="saveDailyStats(${link.id}, ${link.user_id})" class="bg-cyan-600 hover:bg-cyan-700 text-white text-[9px] px-2 py-1 rounded font-bold shadow-sm w-full mt-1">Save Instantly</button>
+                                        </div>
+                                    </td>
+                                    <td class="p-3 text-center"><input type="number" id="link_rate_${link.id}" value="${rate.toFixed(2)}" step="0.01" class="w-16 bg-slate-50 border border-slate-200 text-center rounded-lg p-1 text-emerald-600 font-bold text-xs"></td>
+                                    <td class="p-3 text-center font-extrabold text-cyan-600">${cr}%</td>
+                                    <td class="p-3 text-center">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <button onclick="updateLinkRate(${link.id})" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] px-2 py-1 rounded-lg font-bold shadow-sm">Rate</button>
+                                            <button onclick="deleteLink(${link.id})" class="bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white text-[10px] px-2 py-1 rounded-lg font-bold">🗑️</button>
+                                        </div>
+                                    </td>
+                                </tr>`;
+                        }
+                    });
+                } else {
+                    if(tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-slate-400">No links found.</td></tr>`;
+                }
+
+                const netEarningsFinal = grossEarningsSum - totalDeductions;
+
+                document.getElementById('statActiveLinks').innerText = activeLinksCount;
+                document.getElementById('statTotalClicks').innerText = totalClicksCount.toLocaleString();
+                document.getElementById('statTotalInstalls').innerText = totalInstallsCount.toLocaleString();
+                document.getElementById('statTotalEarnings').innerText = '₹' + netEarningsFinal.toFixed(2);
+            } catch (err) { console.error("Error loading links:", err); }
         }
-
-        const netEarningsFinal = grossEarningsSum - totalDeductions;
-
-        document.getElementById('statActiveLinks').innerText = activeLinksCount;
-        document.getElementById('statTotalClicks').innerText = totalClicksCount.toLocaleString();
-        document.getElementById('statTotalInstalls').innerText = totalInstallsCount.toLocaleString();
-        document.getElementById('statTotalEarnings').innerText = '₹' + netEarningsFinal.toFixed(2);
-    } catch (err) { console.error("Error loading links:", err); }
-}
 
         async function loadAdminPayoutLogs() {
             try {
@@ -544,14 +544,9 @@ async function loadAllLinks() {
         async function logout() { await fetch('/api/logout', { method: 'POST' }); window.location.href = '/login'; }
 
         async function saveDailyStats(linkId, userId) {
-            const statDate = document.getElementById(`statDate_${linkId}`).value;
+            const statDate = new Date().toISOString().split('T')[0];
             const clicks = document.getElementById(`clicksInput_${linkId}`).value;
             const installs = document.getElementById(`installsInput_${linkId}`).value;
-
-            if (!statDate) {
-                alert("Please select a date!");
-                return;
-            }
 
             try {
                 const response = await fetch('/api/admin/edit-daily-stats', {
@@ -568,13 +563,51 @@ async function loadAllLinks() {
 
                 const result = await response.json();
                 if (result.success) {
-                    alert("Stats updated successfully for " + statDate);
+                    alert("Stats updated successfully");
                     loadData();
                 } else {
                     alert("Error: " + result.error);
                 }
             } catch (err) {
                 console.error("Failed to update stats:", err);
+                alert("Something went wrong!");
+            }
+        }
+
+        // New function for Gradual / Time-based Boost
+        async function saveGradualStats(linkId, userId) {
+            const targetClicks = Number(document.getElementById(`clicksInput_${linkId}`).value) || 0;
+            const targetInstalls = Number(document.getElementById(`installsInput_${linkId}`).value) || 0;
+            const durationInMinutes = Number(document.getElementById(`duration_${linkId}`).value) || 0;
+
+            if (durationInMinutes <= 0) {
+                // Agar time 0 diya hai toh direct update call kar do
+                saveDailyStats(linkId, userId);
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/gradual-boost-stats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        link_id: linkId,
+                        user_id: userId,
+                        target_clicks: targetClicks,
+                        target_installs: targetInstalls,
+                        duration_minutes: durationInMinutes
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert(`🚀 Gradual boost started! It will increment over ${durationInMinutes} minutes.`);
+                    loadData();
+                } else {
+                    alert("Error: " + result.error);
+                }
+            } catch (err) {
+                console.error("Failed to start gradual boost:", err);
                 alert("Something went wrong!");
             }
         }

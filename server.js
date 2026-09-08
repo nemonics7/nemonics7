@@ -179,6 +179,7 @@ app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
     }
 });
 
+// --- UPDATED DEDUCT ROUTE: CHECKS IF USER HAS ENOUGH BALANCE BEFORE DEDUCTING ---
 app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
     const userId = req.params.userId;
     const amount_deducted = req.body.amount_deducted || req.body.amount || req.body.deduction;
@@ -190,6 +191,7 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             return res.status(400).json({ error: 'Invalid deduction amount' });
         }
 
+        // 1. User ki links aur installs se total earnings nikalna
         const { data: links, error: linkErr } = await supabase
             .from('links')
             .select('*')
@@ -220,6 +222,7 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             }
         }
 
+        // 2. Ab tak ke saare payouts/deductions minus karna
         const { data: userLogs } = await supabase
             .from('payout_logs')
             .select('amount')
@@ -232,14 +235,17 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             });
         }
 
+        // 3. Available Net Balance calculate karna
         const availableBalance = Math.max(0, totalEarnings - totalDeductionsOrPaid);
 
+        // 4. Check karna ki amount available balance se zyada toh nahi
         if (numAmount > availableBalance) {
             return res.status(400).json({ 
                 error: `Cannot deduct ₹${numAmount}. User only has available balance of ₹${availableBalance.toFixed(2)}!` 
             });
         }
 
+        // 5. Agar balance sahi hai, tabhi payout_logs mein entry save hogi
         const { error: logErr } = await supabase.from('payout_logs').insert([{
             user_id: parseInt(userId),
             amount: -Math.abs(numAmount),
@@ -345,19 +351,22 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
         const userMap = {};
         if (users) users.forEach(u => { userMap[u.id] = u.username; });
 
+        // Saare daily stats fetch karein link_id ke sath
         const { data: allDailyStats } = await supabase.from('daily_stats').select('link_id, stat_date, clicks, installs');
         
         const totalsMap = {};
-        const fullDailyStatsMap = {};
+        const fullDailyStatsMap = {}; // Har link ke saare daily stats store karne ke liye
 
         if (allDailyStats) {
             allDailyStats.forEach(d => {
+                // Total calculation map
                 if (!totalsMap[d.link_id]) {
                     totalsMap[d.link_id] = { clicks: 0, installs: 0 };
                 }
                 totalsMap[d.link_id].clicks += (d.clicks || 0);
                 totalsMap[d.link_id].installs += (d.installs || 0);
 
+                // Full daily stats array map per link
                 if (!fullDailyStatsMap[d.link_id]) {
                     fullDailyStatsMap[d.link_id] = [];
                 }
@@ -383,7 +392,7 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
                 username: userMap[link.user_id] || 'Unassigned',
                 today_clicks: dailyMap[link.id] ? dailyMap[link.id].clicks : 0,
                 today_installs: dailyMap[link.id] ? dailyMap[link.id].installs : 0,
-                daily_stats: fullDailyStatsMap[link.id] || []
+                daily_stats: fullDailyStatsMap[link.id] || [] // 👈 Yeh line zaroori hai frontend ke liye
             };
         });
 
@@ -401,98 +410,6 @@ app.post('/api/admin/adjust-stats', isAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
-// --- NEW GRADUAL INCREMENT (BOOST) API FOR LINKS ---
-app.post('/api/admin/boost-link', isAdmin, async (req, res) => {
-    const { link_id, target_clicks, target_installs, duration_minutes } = req.body;
-    
-    try {
-        const tClicks = parseInt(target_clicks) || 0;
-        const tInstalls = parseInt(target_installs) || 0;
-        const duration = parseInt(duration_minutes) || 0;
-
-        // Fetch current link info
-        const { data: link, error: lErr } = await supabase
-            .from('links')
-            .select('*')
-            .eq('id', link_id)
-            .single();
-
-        if (lErr || !link) return res.status(404).json({ error: 'Link not found' });
-
-        // Agar duration nahi diya ya 0 hai toh turant update kar do
-        if (duration <= 0) {
-            const newClicks = (link.clicks || 0) + tClicks;
-            const newInstalls = (link.installs || 0) + tInstalls;
-            
-            await supabase.from('links').update({ clicks: newClicks, installs: newInstalls }).eq('id', link_id);
-            
-            // Daily stats update
-            const todayStr = getTodayIST();
-            const { data: daily } = await supabase.from('daily_stats').select('*').eq('link_id', link_id).eq('stat_date', todayStr).maybeSingle();
-            if (daily) {
-                await supabase.from('daily_stats').update({ 
-                    clicks: (daily.clicks || 0) + tClicks, 
-                    installs: (daily.installs || 0) + tInstalls 
-                }).eq('id', daily.id);
-            } else {
-                await supabase.from('daily_stats').insert([{
-                    link_id: link.id, user_id: link.user_id, clicks: tClicks, installs: tInstalls, stat_date: todayStr
-                }]);
-            }
-            return res.json({ success: true, message: 'Stats updated instantly!' });
-        }
-
-        // Gradual Background Increments (Har 1 minute mein steps divide honge)
-        const intervalMinutes = 1;
-        const totalSteps = duration / intervalMinutes;
-        
-        const clickStep = tClicks / totalSteps;
-        const installStep = tInstalls / totalSteps;
-
-        let currentStep = 0;
-
-        const boostInterval = setInterval(async () => {
-            currentStep++;
-            
-            const addClicks = currentStep === totalSteps ? (tClicks - Math.floor(clickStep * (totalSteps - 1))) : Math.floor(clickStep);
-            const addInstalls = currentStep === totalSteps ? (tInstalls - Math.floor(installStep * (totalSteps - 1))) : Math.floor(installStep);
-
-            if (addClicks > 0 || addInstalls > 0) {
-                // Fetch latest link data to keep counts accurate
-                const { data: currentLink } = await supabase.from('links').select('clicks, installs').eq('id', link_id).single();
-                if (currentLink) {
-                    await supabase.from('links').update({
-                        clicks: (currentLink.clicks || 0) + addClicks,
-                        installs: (currentLink.installs || 0) + addInstalls
-                    }).eq('id', link_id);
-
-                    const todayStr = getTodayIST();
-                    const { data: daily } = await supabase.from('daily_stats').select('*').eq('link_id', link_id).eq('stat_date', todayStr).maybeSingle();
-                    if (daily) {
-                        await supabase.from('daily_stats').update({
-                            clicks: (daily.clicks || 0) + addClicks,
-                            installs: (daily.installs || 0) + addInstalls
-                        }).eq('id', daily.id);
-                    } else {
-                        await supabase.from('daily_stats').insert([{
-                            link_id: link.id, user_id: link.user_id, clicks: addClicks, installs: addInstalls, stat_date: todayStr
-                        }]);
-                    }
-                }
-            }
-
-            if (currentStep >= totalSteps) {
-                clearInterval(boostInterval);
-            }
-        }, intervalMinutes * 60 * 1000);
-
-        res.json({ success: true, message: `Gradual boost started! It will increment over ${duration} minutes.` });
-    } catch (err) {
-        console.error("Boost error:", err);
-        res.status(500).json({ error: 'Server error during gradual boost' });
-    }
-});
-
 app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     const { link_id } = req.body;
     try {
@@ -504,7 +421,7 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     }
 });
 
-// --- USER LINKS API ---
+// --- USER LINKS API: PURE ANALYTICS (NO DEDUCTION SUBTRACTION IN STATS) ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     let { startDate, endDate } = req.query;
@@ -615,6 +532,7 @@ app.get('/s/:shortCode', async (req, res) => {
         const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
         const todayStr = getTodayIST();
 
+        // 1. Link dhoondhein
         const { data: link, error: linkErr } = await supabase
           .from('links')
           .select('*')
@@ -627,6 +545,7 @@ app.get('/s/:shortCode', async (req, res) => {
 
         const targetUrl = link.target_url.trim();
 
+        // 2. Check karein ki kya is IP ne aaj is link par pehle click kiya hai ya nahi
         const { data: existingClick } = await supabase
             .from('link_clicks')
             .select('id')
@@ -635,10 +554,15 @@ app.get('/s/:shortCode', async (req, res) => {
             .gte('created_at', `${todayStr}T00:00:00`)
             .maybeSingle();
 
+        // 3. Agar aaj pehli baar click kiya hai, tabhi clicks count aur database update honge
         if (!existingClick) {
+            // IP record save karein link_clicks table mein
             await supabase.from('link_clicks').insert([{ link_id: link.id, ip_address: clientIp }]);
+
+            // Total clicks badhayein links table mein
             await supabase.from('links').update({ clicks: (link.clicks || 0) + 1 }).eq('id', link.id);
 
+            // Daily stats update ya insert karein
             const { data: existingDaily } = await supabase
                 .from('daily_stats')
                 .select('id, clicks')
@@ -664,6 +588,7 @@ app.get('/s/:shortCode', async (req, res) => {
             }
         }
 
+        // 4. Chahe unique ho ya duplicate click, user target URL par redirect ho jayega
         return res.redirect(targetUrl);
     } catch (err) {
         console.error("Redirect error:", err);

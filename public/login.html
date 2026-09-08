@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <!-- Viewport tag to prevent unwanted scaling/zoom on mobile -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Login - Nemonics Control Hub</title>
+    <title>Login - Nemonics Track Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -70,7 +70,7 @@
                     </div>
                     <div>
                         <h2 class="font-extrabold text-slate-900 tracking-wide text-xs">NEMONICS</h2>
-                        <p class="text-[9px] text-slate-500 uppercase tracking-widest font-semibold">Control Hub</p>
+                        <p class="text-[9px] text-slate-500 uppercase tracking-widest font-semibold">Track Hub</p>
                     </div>
                 </div>
 
@@ -85,12 +85,12 @@
                         Control & Analytics <br><span class="bg-gradient-to-r from-cyan-600 to-indigo-600 bg-clip-text text-transparent">Ecosystem</span>
                     </h2>
                     <p class="text-xs text-slate-600 font-medium leading-relaxed">
-                        Access your operational control center and monitor real-time distribution metrics securely.
+                        Access your operational track center and measure real-time metrics securely.
                     </p>
                 </div>
 
                 <div class="text-[10px] text-slate-500 font-mono flex items-center justify-between border-t border-slate-200 pt-4">
-                    <span>ENCRYPTION: AES-256</span>
+                    <span>NEMONICS @2026 ALL RIGHTS RESERVED</span>
                     <span class="flex items-center gap-1.5 text-cyan-600 font-semibold">
                         <span class="w-2 h-2 rounded-full bg-cyan-500 animate-ping"></span> NODE: ACTIVE
                     </span>
@@ -104,7 +104,7 @@
                     <!-- Header Title -->
                     <div class="space-y-1">
                         <h2 class="text-lg font-bold text-slate-900 tracking-tight">Welcome Back</h2>
-                        <p class="text-xs text-slate-500">Please sign in to your control center account</p>
+                        <p class="text-xs text-slate-500">Please sign in to your dashbaord</p>
                     </div>
 
                     <div id="errorMessage" class="hidden bg-rose-50 border border-rose-200 text-rose-600 text-xs p-3.5 rounded-2xl font-semibold text-center"></div>
@@ -174,7 +174,7 @@
                     if (data.role === 'admin') {
                         window.location.href = '/admin';
                     } else {
-                        window.location.href = '/user';
+                        window.location.href = '/dashboard';
                     }
                 } else {
                     errorDiv.textContent = data.error || 'Invalid credentials. Please try again.';

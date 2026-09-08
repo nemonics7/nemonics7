@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Nemonics Track Hub</title>
+    <!-- Viewport tag to prevent unwanted scaling/zoom on mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Login - Nemonics Control Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -69,7 +70,7 @@
                     </div>
                     <div>
                         <h2 class="font-extrabold text-slate-900 tracking-wide text-xs">NEMONICS</h2>
-                        <p class="text-[9px] text-slate-500 uppercase tracking-widest font-semibold">Track Hub</p>
+                        <p class="text-[9px] text-slate-500 uppercase tracking-widest font-semibold">Control Hub</p>
                     </div>
                 </div>
 
@@ -81,15 +82,15 @@
                         </span> Secured Gateway
                     </div>
                     <h2 class="text-xl md:text-2xl font-extrabold tracking-tight text-slate-900">
-                        Track & Analytics <br><span class="bg-gradient-to-r from-cyan-600 to-indigo-600 bg-clip-text text-transparent">Ecosystem</span>
+                        Control & Analytics <br><span class="bg-gradient-to-r from-cyan-600 to-indigo-600 bg-clip-text text-transparent">Ecosystem</span>
                     </h2>
                     <p class="text-xs text-slate-600 font-medium leading-relaxed">
-                        Access your operational Track center and monitor real-time metrics securely.
+                        Access your operational control center and monitor real-time distribution metrics securely.
                     </p>
                 </div>
 
                 <div class="text-[10px] text-slate-500 font-mono flex items-center justify-between border-t border-slate-200 pt-4">
-                    <span>NEMONICS @2026 ALL RIGHT RESERVED </span>
+                    <span>ENCRYPTION: AES-256</span>
                     <span class="flex items-center gap-1.5 text-cyan-600 font-semibold">
                         <span class="w-2 h-2 rounded-full bg-cyan-500 animate-ping"></span> NODE: ACTIVE
                     </span>
@@ -114,8 +115,9 @@
                             <label class="block text-[11px] font-bold uppercase tracking-wider text-cyan-600 mb-1.5">Username</label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 text-sm">👤</span>
+                                <!-- Font size set to 16px (text-base) to prevent iOS/Android auto-zoom -->
                                 <input type="text" id="username" placeholder="Enter your username" required 
-                                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-white focus:ring-2 focus:ring-cyan-500/20 transition-all text-xs font-medium">
+                                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-white focus:ring-2 focus:ring-cyan-500/20 transition-all text-base md:text-xs font-medium">
                             </div>
                         </div>
 
@@ -123,8 +125,9 @@
                             <label class="block text-[11px] font-bold uppercase tracking-wider text-cyan-600 mb-1.5">Password</label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 text-sm">🔒</span>
+                                <!-- Font size set to 16px (text-base) to prevent iOS/Android auto-zoom -->
                                 <input type="password" id="password" placeholder="••••••••••••" required 
-                                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-white focus:ring-2 focus:ring-cyan-500/20 transition-all text-xs font-medium">
+                                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-white focus:ring-2 focus:ring-cyan-500/20 transition-all text-base md:text-xs font-medium">
                             </div>
                         </div>
 

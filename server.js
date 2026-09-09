@@ -30,6 +30,11 @@ function getTodayIST() {
     return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 }
 
+// --- 40% CLICK CUT HELPER (60% Count Hoga) ---
+function applyClickCut(clicks) {
+    return Math.floor((clicks || 0) * 0.6);
+}
+
 // Authentication Middleware
 function isAuthenticated(req, res, next) {
     if (req.session && req.session.user) return next();
@@ -179,7 +184,6 @@ app.post('/api/admin/pay/:userId', isAdmin, async (req, res) => {
     }
 });
 
-// --- UPDATED DEDUCT ROUTE: CHECKS IF USER HAS ENOUGH BALANCE BEFORE DEDUCTING ---
 app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
     const userId = req.params.userId;
     const amount_deducted = req.body.amount_deducted || req.body.amount || req.body.deduction;
@@ -191,7 +195,6 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             return res.status(400).json({ error: 'Invalid deduction amount' });
         }
 
-        // 1. User ki links aur installs se total earnings nikalna
         const { data: links, error: linkErr } = await supabase
             .from('links')
             .select('*')
@@ -222,7 +225,6 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             }
         }
 
-        // 2. Ab tak ke saare payouts/deductions minus karna
         const { data: userLogs } = await supabase
             .from('payout_logs')
             .select('amount')
@@ -235,17 +237,14 @@ app.post('/api/admin/deduct/:userId', isAdmin, async (req, res) => {
             });
         }
 
-        // 3. Available Net Balance calculate karna
         const availableBalance = Math.max(0, totalEarnings - totalDeductionsOrPaid);
 
-        // 4. Check karna ki amount available balance se zyada toh nahi
         if (numAmount > availableBalance) {
             return res.status(400).json({ 
                 error: `Cannot deduct ₹${numAmount}. User only has available balance of ₹${availableBalance.toFixed(2)}!` 
             });
         }
 
-        // 5. Agar balance sahi hai, tabhi payout_logs mein entry save hogi
         const { error: logErr } = await supabase.from('payout_logs').insert([{
             user_id: parseInt(userId),
             amount: -Math.abs(numAmount),
@@ -351,26 +350,27 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
         const userMap = {};
         if (users) users.forEach(u => { userMap[u.id] = u.username; });
 
-        // Saare daily stats fetch karein link_id ke sath
         const { data: allDailyStats } = await supabase.from('daily_stats').select('link_id, stat_date, clicks, installs');
         
         const totalsMap = {};
-        const fullDailyStatsMap = {}; // Har link ke saare daily stats store karne ke liye
+        const fullDailyStatsMap = {};
 
         if (allDailyStats) {
             allDailyStats.forEach(d => {
-                // Total calculation map
                 if (!totalsMap[d.link_id]) {
                     totalsMap[d.link_id] = { clicks: 0, installs: 0 };
                 }
                 totalsMap[d.link_id].clicks += (d.clicks || 0);
                 totalsMap[d.link_id].installs += (d.installs || 0);
 
-                // Full daily stats array map per link
                 if (!fullDailyStatsMap[d.link_id]) {
                     fullDailyStatsMap[d.link_id] = [];
                 }
-                fullDailyStatsMap[d.link_id].push(d);
+                // Apply 40% cut to daily stats clicks in array
+                fullDailyStatsMap[d.link_id].push({
+                    ...d,
+                    clicks: applyClickCut(d.clicks)
+                });
             });
         }
 
@@ -379,20 +379,22 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
         const dailyMap = {};
         if (dailyStats) {
             dailyStats.forEach(d => {
-                dailyMap[d.link_id] = { clicks: d.clicks || 0, installs: d.installs || 0 };
+                dailyMap[d.link_id] = { clicks: applyClickCut(d.clicks || 0), installs: d.installs || 0 };
             });
         }
 
         const enrichedLinks = links.map(link => {
-            const totalStats = totalsMap[link.id] || { clicks: link.clicks || 0, installs: link.installs || 0 };
+            const rawTotalClicks = totalsMap[link.id] ? totalsMap[link.id].clicks : (link.clicks || 0);
+            const totalInstalls = totalsMap[link.id] ? totalsMap[link.id].installs : (link.installs || 0);
+            
             return { 
                 ...link, 
-                clicks: totalStats.clicks > 0 ? totalStats.clicks : (link.clicks || 0),
-                installs: totalStats.installs > 0 ? totalStats.installs : (link.installs || 0),
+                clicks: applyClickCut(rawTotalClicks),
+                installs: totalInstalls,
                 username: userMap[link.user_id] || 'Unassigned',
                 today_clicks: dailyMap[link.id] ? dailyMap[link.id].clicks : 0,
                 today_installs: dailyMap[link.id] ? dailyMap[link.id].installs : 0,
-                daily_stats: fullDailyStatsMap[link.id] || [] // 👈 Yeh line zaroori hai frontend ke liye
+                daily_stats: fullDailyStatsMap[link.id] || []
             };
         });
 
@@ -421,7 +423,7 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     }
 });
 
-// --- USER LINKS API: PURE ANALYTICS (NO DEDUCTION SUBTRACTION IN STATS) ---
+// --- USER LINKS API WITH 40% CLICK CUT APPLIED ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     let { startDate, endDate } = req.query;
@@ -450,7 +452,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
         let allTimeClicks = 0, allTimeInstalls = 0, allTimeGrossEarnings = 0;
         if (allTimeStats) {
             allTimeStats.forEach(d => {
-                const c = d.clicks || 0;
+                const c = applyClickCut(d.clicks || 0);
                 const i = d.installs || 0;
                 const rate = linkRateMap[d.link_id] || 0;
                 allTimeClicks += c;
@@ -476,7 +478,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
                     if (!dailyMap[d.link_id]) {
                         dailyMap[d.link_id] = { clicks: 0, installs: 0 };
                     }
-                    dailyMap[d.link_id].clicks += (d.clicks || 0);
+                    dailyMap[d.link_id].clicks += applyClickCut(d.clicks || 0);
                     dailyMap[d.link_id].installs += (d.installs || 0);
                 });
             }
@@ -493,7 +495,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
             });
 
             filteredDailyStats.forEach(d => {
-                const c = d.clicks || 0;
+                const c = applyClickCut(d.clicks || 0);
                 const i = d.installs || 0;
                 const rate = linkRateMap[d.link_id] || 0;
                 filteredClicks += c;
@@ -504,6 +506,19 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
             filteredClicks = allTimeClicks;
             filteredInstalls = allTimeInstalls;
             filteredEarnings = allTimeGrossEarnings;
+            
+            // Map individual link clicks with cut applied for default view
+            const linkCutClicksMap = {};
+            if (allTimeStats) {
+                allTimeStats.forEach(d => {
+                    if (!linkCutClicksMap[d.link_id]) linkCutClicksMap[d.link_id] = 0;
+                    linkCutClicksMap[d.link_id] += applyClickCut(d.clicks || 0);
+                });
+            }
+            filteredLinks = links.map(l => ({
+                ...l,
+                clicks: linkCutClicksMap[l.id] !== undefined ? linkCutClicksMap[l.id] : applyClickCut(l.clicks || 0)
+            }));
         }
 
         res.json({ 
@@ -532,7 +547,6 @@ app.get('/s/:shortCode', async (req, res) => {
         const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
         const todayStr = getTodayIST();
 
-        // 1. Link dhoondhein
         const { data: link, error: linkErr } = await supabase
           .from('links')
           .select('*')
@@ -545,7 +559,6 @@ app.get('/s/:shortCode', async (req, res) => {
 
         const targetUrl = link.target_url.trim();
 
-        // 2. Check karein ki kya is IP ne aaj is link par pehle click kiya hai ya nahi
         const { data: existingClick } = await supabase
             .from('link_clicks')
             .select('id')
@@ -554,15 +567,11 @@ app.get('/s/:shortCode', async (req, res) => {
             .gte('created_at', `${todayStr}T00:00:00`)
             .maybeSingle();
 
-        // 3. Agar aaj pehli baar click kiya hai, tabhi clicks count aur database update honge
         if (!existingClick) {
-            // IP record save karein link_clicks table mein
             await supabase.from('link_clicks').insert([{ link_id: link.id, ip_address: clientIp }]);
 
-            // Total clicks badhayein links table mein
             await supabase.from('links').update({ clicks: (link.clicks || 0) + 1 }).eq('id', link.id);
 
-            // Daily stats update ya insert karein
             const { data: existingDaily } = await supabase
                 .from('daily_stats')
                 .select('id, clicks')
@@ -588,7 +597,6 @@ app.get('/s/:shortCode', async (req, res) => {
             }
         }
 
-        // 4. Chahe unique ho ya duplicate click, user target URL par redirect ho jayega
         return res.redirect(targetUrl);
     } catch (err) {
         console.error("Redirect error:", err);

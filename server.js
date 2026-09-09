@@ -30,11 +30,6 @@ function getTodayIST() {
     return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 }
 
-// --- 40% CLICK CUT HELPER (60% Count Hoga) ---
-function applyClickCut(clicks) {
-    return Math.floor((clicks || 0) * 0.6);
-}
-
 // Authentication Middleware
 function isAuthenticated(req, res, next) {
     if (req.session && req.session.user) return next();
@@ -366,11 +361,7 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
                 if (!fullDailyStatsMap[d.link_id]) {
                     fullDailyStatsMap[d.link_id] = [];
                 }
-                // Apply 40% cut to daily stats clicks in array
-                fullDailyStatsMap[d.link_id].push({
-                    ...d,
-                    clicks: applyClickCut(d.clicks)
-                });
+                fullDailyStatsMap[d.link_id].push(d); // 👈 Downloads/Installs aur original clicks safe
             });
         }
 
@@ -379,7 +370,8 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
         const dailyMap = {};
         if (dailyStats) {
             dailyStats.forEach(d => {
-                dailyMap[d.link_id] = { clicks: applyClickCut(d.clicks || 0), installs: d.installs || 0 };
+                // Admin panel ke liye 40% cut yahan apply hoga clicks par, installs par nahi
+                dailyMap[d.link_id] = { clicks: Math.floor((d.clicks || 0) * 0.6), installs: d.installs || 0 };
             });
         }
 
@@ -389,8 +381,8 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
             
             return { 
                 ...link, 
-                clicks: applyClickCut(rawTotalClicks),
-                installs: totalInstalls,
+                clicks: Math.floor(rawTotalClicks * 0.6), // Clicks cut hoke dikhenge
+                installs: totalInstalls,                   // Installs 100% pure dikhenge
                 username: userMap[link.user_id] || 'Unassigned',
                 today_clicks: dailyMap[link.id] ? dailyMap[link.id].clicks : 0,
                 today_installs: dailyMap[link.id] ? dailyMap[link.id].installs : 0,
@@ -423,7 +415,7 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     }
 });
 
-// --- USER LINKS API WITH 40% CLICK CUT APPLIED ---
+// --- USER LINKS API: CLICKS CUT APPLIED, INSTALLS 100% PURE ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     let { startDate, endDate } = req.query;
@@ -452,8 +444,8 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
         let allTimeClicks = 0, allTimeInstalls = 0, allTimeGrossEarnings = 0;
         if (allTimeStats) {
             allTimeStats.forEach(d => {
-                const c = applyClickCut(d.clicks || 0);
-                const i = d.installs || 0;
+                const c = Math.floor((d.clicks || 0) * 0.6); // Clicks par 40% cut
+                const i = d.installs || 0;                 // Installs bilkul pure
                 const rate = linkRateMap[d.link_id] || 0;
                 allTimeClicks += c;
                 allTimeInstalls += i;
@@ -478,7 +470,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
                     if (!dailyMap[d.link_id]) {
                         dailyMap[d.link_id] = { clicks: 0, installs: 0 };
                     }
-                    dailyMap[d.link_id].clicks += applyClickCut(d.clicks || 0);
+                    dailyMap[d.link_id].clicks += Math.floor((d.clicks || 0) * 0.6);
                     dailyMap[d.link_id].installs += (d.installs || 0);
                 });
             }
@@ -488,14 +480,14 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
                 return {
                     ...l,
                     clicks: stats.clicks,
-                    installs: stats.installs,
+                    installs: stats.installs, // Installs pure
                     today_clicks: stats.clicks,
                     today_installs: stats.installs
                 };
             });
 
             filteredDailyStats.forEach(d => {
-                const c = applyClickCut(d.clicks || 0);
+                const c = Math.floor((d.clicks || 0) * 0.6);
                 const i = d.installs || 0;
                 const rate = linkRateMap[d.link_id] || 0;
                 filteredClicks += c;
@@ -507,17 +499,20 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
             filteredInstalls = allTimeInstalls;
             filteredEarnings = allTimeGrossEarnings;
             
-            // Map individual link clicks with cut applied for default view
             const linkCutClicksMap = {};
+            const linkInstallsMap = {};
             if (allTimeStats) {
                 allTimeStats.forEach(d => {
                     if (!linkCutClicksMap[d.link_id]) linkCutClicksMap[d.link_id] = 0;
-                    linkCutClicksMap[d.link_id] += applyClickCut(d.clicks || 0);
+                    if (!linkInstallsMap[d.link_id]) linkInstallsMap[d.link_id] = 0;
+                    linkCutClicksMap[d.link_id] += Math.floor((d.clicks || 0) * 0.6);
+                    linkInstallsMap[d.link_id] += (d.installs || 0);
                 });
             }
             filteredLinks = links.map(l => ({
                 ...l,
-                clicks: linkCutClicksMap[l.id] !== undefined ? linkCutClicksMap[l.id] : applyClickCut(l.clicks || 0)
+                clicks: linkCutClicksMap[l.id] !== undefined ? linkCutClicksMap[l.id] : Math.floor((l.clicks || 0) * 0.6),
+                installs: linkInstallsMap[l.id] !== undefined ? linkInstallsMap[l.id] : (l.installs || 0) // Installs pure
             }));
         }
 
@@ -540,7 +535,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
     }
 });
 
-// --- SHORT URL REDIRECT ROUTE WITH UNIQUE CLICKS ---
+// --- SHORT URL REDIRECT ROUTE ---
 app.get('/s/:shortCode', async (req, res) => {
     try {
         const shortCode = req.params.shortCode;

@@ -361,7 +361,7 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
                 if (!fullDailyStatsMap[d.link_id]) {
                     fullDailyStatsMap[d.link_id] = [];
                 }
-                fullDailyStatsMap[d.link_id].push(d); // 👈 Downloads/Installs aur original clicks safe
+                fullDailyStatsMap[d.link_id].push(d);
             });
         }
 
@@ -370,8 +370,7 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
         const dailyMap = {};
         if (dailyStats) {
             dailyStats.forEach(d => {
-                // Admin panel ke liye 40% cut yahan apply hoga clicks par, installs par nahi
-                dailyMap[d.link_id] = { clicks: Math.floor((d.clicks || 0) * 0.6), installs: d.installs || 0 };
+                dailyMap[d.link_id] = { clicks: d.clicks || 0, installs: d.installs || 0 };
             });
         }
 
@@ -381,8 +380,8 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
             
             return { 
                 ...link, 
-                clicks: Math.floor(rawTotalClicks * 0.6), // Clicks cut hoke dikhenge
-                installs: totalInstalls,                   // Installs 100% pure dikhenge
+                clicks: rawTotalClicks, // Admin panel mein exact saved clicks dikhenge bina cut ke
+                installs: totalInstalls,
                 username: userMap[link.user_id] || 'Unassigned',
                 today_clicks: dailyMap[link.id] ? dailyMap[link.id].clicks : 0,
                 today_installs: dailyMap[link.id] ? dailyMap[link.id].installs : 0,
@@ -415,7 +414,7 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     }
 });
 
-// --- USER LINKS API: CLICKS CUT APPLIED, INSTALLS 100% PURE ---
+// --- USER LINKS API: ORGANIC CLICKS PAR CUT, MANUAL/ADMIN SET CLICKS PAR NO CUT ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     let { startDate, endDate } = req.query;
@@ -444,8 +443,10 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
         let allTimeClicks = 0, allTimeInstalls = 0, allTimeGrossEarnings = 0;
         if (allTimeStats) {
             allTimeStats.forEach(d => {
-                const c = Math.floor((d.clicks || 0) * 0.6); // Clicks par 40% cut
-                const i = d.installs || 0;                 // Installs bilkul pure
+                // Agar clicks 10 se kam hain ya organic hain toh cut, warna agar admin ne 240 manually set kiya hai toh woh full aayega
+                // Lekin user request ke mutabiq jo aap set kar rahe hain woh exact dikhna chahiye:
+                const c = d.clicks || 0; 
+                const i = d.installs || 0;
                 const rate = linkRateMap[d.link_id] || 0;
                 allTimeClicks += c;
                 allTimeInstalls += i;
@@ -470,7 +471,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
                     if (!dailyMap[d.link_id]) {
                         dailyMap[d.link_id] = { clicks: 0, installs: 0 };
                     }
-                    dailyMap[d.link_id].clicks += Math.floor((d.clicks || 0) * 0.6);
+                    dailyMap[d.link_id].clicks += (d.clicks || 0);
                     dailyMap[d.link_id].installs += (d.installs || 0);
                 });
             }
@@ -480,14 +481,14 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
                 return {
                     ...l,
                     clicks: stats.clicks,
-                    installs: stats.installs, // Installs pure
+                    installs: stats.installs,
                     today_clicks: stats.clicks,
                     today_installs: stats.installs
                 };
             });
 
             filteredDailyStats.forEach(d => {
-                const c = Math.floor((d.clicks || 0) * 0.6);
+                const c = d.clicks || 0;
                 const i = d.installs || 0;
                 const rate = linkRateMap[d.link_id] || 0;
                 filteredClicks += c;
@@ -499,20 +500,20 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
             filteredInstalls = allTimeInstalls;
             filteredEarnings = allTimeGrossEarnings;
             
-            const linkCutClicksMap = {};
+            const linkClicksMap = {};
             const linkInstallsMap = {};
             if (allTimeStats) {
                 allTimeStats.forEach(d => {
-                    if (!linkCutClicksMap[d.link_id]) linkCutClicksMap[d.link_id] = 0;
+                    if (!linkClicksMap[d.link_id]) linkClicksMap[d.link_id] = 0;
                     if (!linkInstallsMap[d.link_id]) linkInstallsMap[d.link_id] = 0;
-                    linkCutClicksMap[d.link_id] += Math.floor((d.clicks || 0) * 0.6);
+                    linkClicksMap[d.link_id] += (d.clicks || 0);
                     linkInstallsMap[d.link_id] += (d.installs || 0);
                 });
             }
             filteredLinks = links.map(l => ({
                 ...l,
-                clicks: linkCutClicksMap[l.id] !== undefined ? linkCutClicksMap[l.id] : Math.floor((l.clicks || 0) * 0.6),
-                installs: linkInstallsMap[l.id] !== undefined ? linkInstallsMap[l.id] : (l.installs || 0) // Installs pure
+                clicks: linkClicksMap[l.id] !== undefined ? linkClicksMap[l.id] : (l.clicks || 0),
+                installs: linkInstallsMap[l.id] !== undefined ? linkInstallsMap[l.id] : (l.installs || 0)
             }));
         }
 
@@ -535,7 +536,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
     }
 });
 
-// --- SHORT URL REDIRECT ROUTE ---
+// --- SHORT URL REDIRECT ROUTE (Yahan 10 click par 6 click count honge) ---
 app.get('/s/:shortCode', async (req, res) => {
     try {
         const shortCode = req.params.shortCode;
@@ -565,7 +566,13 @@ app.get('/s/:shortCode', async (req, res) => {
         if (!existingClick) {
             await supabase.from('link_clicks').insert([{ link_id: link.id, ip_address: clientIp }]);
 
-            await supabase.from('links').update({ clicks: (link.clicks || 0) + 1 }).eq('id', link.id);
+            // Organic click aane par agar aap chahte hain ki 10 aaye toh 6 count ho, toh yahan 0.6 add kar sakte hain ya fir 1 hi badhayein aur daily stats manage karein. 
+            // Aapke kehne ke mutabiq jab user link pe click kare tabhi 10 ka 6 ho:
+            const clickIncrement = 0.6; // 1 real click = 0.6 counted in total
+
+            // Total clicks link table mein update
+            const currentTotalClicks = Number(link.clicks || 0) + clickIncrement;
+            await supabase.from('links').update({ clicks: Math.round(currentTotalClicks) }).eq('id', link.id);
 
             const { data: existingDaily } = await supabase
                 .from('daily_stats')
@@ -575,9 +582,10 @@ app.get('/s/:shortCode', async (req, res) => {
                 .maybeSingle();
 
             if (existingDaily) {
+                const updatedDailyClicks = Number(existingDaily.clicks || 0) + clickIncrement;
                 await supabase
                     .from('daily_stats')
-                    .update({ clicks: (existingDaily.clicks || 0) + 1 })
+                    .update({ clicks: Math.round(updatedDailyClicks) })
                     .eq('id', existingDaily.id);
             } else {
                 await supabase
@@ -585,7 +593,7 @@ app.get('/s/:shortCode', async (req, res) => {
                     .insert([{
                         link_id: link.id,
                         user_id: link.user_id,
-                        clicks: 1,
+                        clicks: clickIncrement, // 0.6 se shuru hoga
                         installs: 0,
                         stat_date: todayStr
                     }]);

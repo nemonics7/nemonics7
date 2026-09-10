@@ -414,7 +414,7 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     }
 });
 
-// --- USER LINKS API ---
+// --- USER LINKS API (Pure Data, No Cuts) ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     let { startDate, endDate } = req.query;
@@ -443,7 +443,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
         let allTimeClicks = 0, allTimeInstalls = 0, allTimeGrossEarnings = 0;
         if (allTimeStats) {
             allTimeStats.forEach(d => {
-                const c = d.clicks || 0; 
+                const c = d.clicks || 0;
                 const i = d.installs || 0;
                 const rate = linkRateMap[d.link_id] || 0;
                 allTimeClicks += c;
@@ -534,7 +534,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
     }
 });
 
-// --- SHORT URL REDIRECT ROUTE (Yahan ab 10 click aane par 6 click (40% cut) save honge) ---
+// --- SHORT URL REDIRECT ROUTE (UNIQUE IP CLICK LOGIC) ---
 app.get('/s/:shortCode', async (req, res) => {
     try {
         const shortCode = req.params.shortCode;
@@ -553,6 +553,7 @@ app.get('/s/:shortCode', async (req, res) => {
 
         const targetUrl = link.target_url.trim();
 
+        // Check if this IP has already clicked this link today
         const { data: existingClick } = await supabase
             .from('link_clicks')
             .select('id')
@@ -561,14 +562,11 @@ app.get('/s/:shortCode', async (req, res) => {
             .gte('created_at', `${todayStr}T00:00:00`)
             .maybeSingle();
 
+        // Agar IP pehle se nahi hai aaj ke din, tabhi unique click count hoga (+1)
         if (!existingClick) {
             await supabase.from('link_clicks').insert([{ link_id: link.id, ip_address: clientIp }]);
 
-            // Har 1 real click par 0.6 add hoga (yani 10 click par total 6 click hi badhenge)
-            const clickIncrement = 0.6;
-
-            const currentTotalClicks = Number(link.clicks || 0) + clickIncrement;
-            await supabase.from('links').update({ clicks: Math.round(currentTotalClicks) }).eq('id', link.id);
+            await supabase.from('links').update({ clicks: (link.clicks || 0) + 1 }).eq('id', link.id);
 
             const { data: existingDaily } = await supabase
                 .from('daily_stats')
@@ -578,10 +576,9 @@ app.get('/s/:shortCode', async (req, res) => {
                 .maybeSingle();
 
             if (existingDaily) {
-                const updatedDailyClicks = Number(existingDaily.clicks || 0) + clickIncrement;
                 await supabase
                     .from('daily_stats')
-                    .update({ clicks: Math.round(updatedDailyClicks) })
+                    .update({ clicks: (existingDaily.clicks || 0) + 1 })
                     .eq('id', existingDaily.id);
             } else {
                 await supabase
@@ -589,7 +586,7 @@ app.get('/s/:shortCode', async (req, res) => {
                     .insert([{
                         link_id: link.id,
                         user_id: link.user_id,
-                        clicks: clickIncrement,
+                        clicks: 1,
                         installs: 0,
                         stat_date: todayStr
                     }]);

@@ -380,7 +380,7 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
             
             return { 
                 ...link, 
-                clicks: rawTotalClicks, // Admin panel mein exact saved clicks dikhenge bina cut ke
+                clicks: rawTotalClicks,
                 installs: totalInstalls,
                 username: userMap[link.user_id] || 'Unassigned',
                 today_clicks: dailyMap[link.id] ? dailyMap[link.id].clicks : 0,
@@ -414,7 +414,7 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     }
 });
 
-// --- USER LINKS API: ORGANIC CLICKS PAR CUT, MANUAL/ADMIN SET CLICKS PAR NO CUT ---
+// --- USER LINKS API ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     let { startDate, endDate } = req.query;
@@ -443,8 +443,6 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
         let allTimeClicks = 0, allTimeInstalls = 0, allTimeGrossEarnings = 0;
         if (allTimeStats) {
             allTimeStats.forEach(d => {
-                // Agar clicks 10 se kam hain ya organic hain toh cut, warna agar admin ne 240 manually set kiya hai toh woh full aayega
-                // Lekin user request ke mutabiq jo aap set kar rahe hain woh exact dikhna chahiye:
                 const c = d.clicks || 0; 
                 const i = d.installs || 0;
                 const rate = linkRateMap[d.link_id] || 0;
@@ -536,7 +534,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
     }
 });
 
-// --- SHORT URL REDIRECT ROUTE (Yahan 10 click par 6 click count honge) ---
+// --- SHORT URL REDIRECT ROUTE (Yahan ab 10 click aane par 6 click (40% cut) save honge) ---
 app.get('/s/:shortCode', async (req, res) => {
     try {
         const shortCode = req.params.shortCode;
@@ -566,11 +564,9 @@ app.get('/s/:shortCode', async (req, res) => {
         if (!existingClick) {
             await supabase.from('link_clicks').insert([{ link_id: link.id, ip_address: clientIp }]);
 
-            // Organic click aane par agar aap chahte hain ki 10 aaye toh 6 count ho, toh yahan 0.6 add kar sakte hain ya fir 1 hi badhayein aur daily stats manage karein. 
-            // Aapke kehne ke mutabiq jab user link pe click kare tabhi 10 ka 6 ho:
-            const clickIncrement = 0.6; // 1 real click = 0.6 counted in total
+            // Har 1 real click par 0.6 add hoga (yani 10 click par total 6 click hi badhenge)
+            const clickIncrement = 0.6;
 
-            // Total clicks link table mein update
             const currentTotalClicks = Number(link.clicks || 0) + clickIncrement;
             await supabase.from('links').update({ clicks: Math.round(currentTotalClicks) }).eq('id', link.id);
 
@@ -593,7 +589,7 @@ app.get('/s/:shortCode', async (req, res) => {
                     .insert([{
                         link_id: link.id,
                         user_id: link.user_id,
-                        clicks: clickIncrement, // 0.6 se shuru hoga
+                        clicks: clickIncrement,
                         installs: 0,
                         stat_date: todayStr
                     }]);

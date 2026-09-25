@@ -119,7 +119,7 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
         if (links) {
             links.forEach(l => {
                 if (userMap[l.user_id]) {
-                    const installs = linkInstallsMap[l.id] !== undefined ? linkInstallsMap[l.id] : calculateGradualInstalls(l);
+                    const installs = linkInstallsMap[l.id] !== undefined ? linkInstallsMap[l.id] : (l.installs || 0);
                     const rate = Number(l.rate_per_install || userMap[l.user_id].rate_per_install || 0);
                     
                     userMap[l.user_id].total_installs += installs;
@@ -334,26 +334,6 @@ app.post('/api/admin/assign-links', isAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// Helper function to calculate active gradual installs based on time
-function calculateGradualInstalls(link) {
-    if (!link.gradual_end_time || !link.gradual_start_time || !link.target_installs) {
-        return link.installs || 0;
-    }
-    const now = Math.floor(Date.now() / 1000);
-    if (now >= link.gradual_end_time) {
-        return link.target_installs;
-    }
-    const totalDuration = link.gradual_end_time - link.gradual_start_time;
-    const elapsedTime = now - link.gradual_start_time;
-    const startInstalls = link.gradual_start_installs || link.installs || 0;
-    const totalDiff = link.target_installs - startInstalls;
-
-    if (totalDuration <= 0 || totalDiff <= 0) return link.target_installs;
-
-    const currentCalculated = startInstalls + Math.floor((totalDiff * elapsedTime) / totalDuration);
-    return Math.min(currentCalculated, link.target_installs);
-}
-
 app.get('/api/admin/all-links', isAdmin, async (req, res) => {
     try {
         const { data: links, error: linkError } = await supabase.from('links').select('*').order('created_at', { ascending: false });
@@ -365,7 +345,8 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
         const userMap = {};
         if (users) users.forEach(u => { userMap[u.id] = u.username; });
 
-        const { data: allDailyStats } = await supabase.from('daily_stats').select('*');
+        const { data: allDailyStats } = await supabase.from('daily_stats').select('link_id, stat_date, clicks, installs');
+        
         const totalsMap = {};
         const fullDailyStatsMap = {};
 
@@ -394,16 +375,16 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
         }
 
         const enrichedLinks = links.map(link => {
-            const activeInstalls = calculateGradualInstalls(link);
             const rawTotalClicks = totalsMap[link.id] ? totalsMap[link.id].clicks : (link.clicks || 0);
+            const totalInstalls = totalsMap[link.id] ? totalsMap[link.id].installs : (link.installs || 0);
             
             return { 
                 ...link, 
                 clicks: rawTotalClicks,
-                installs: activeInstalls,
+                installs: totalInstalls,
                 username: userMap[link.user_id] || 'Unassigned',
                 today_clicks: dailyMap[link.id] ? dailyMap[link.id].clicks : 0,
-                today_installs: dailyMap[link.id] ? dailyMap[link.id].installs : activeInstalls,
+                today_installs: dailyMap[link.id] ? dailyMap[link.id].installs : 0,
                 daily_stats: fullDailyStatsMap[link.id] || []
             };
         });
@@ -415,73 +396,11 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
     }
 });
 
-// --- TIME-BASED GRADUAL INCREASE LOGIC FOR ADJUST-STATS ---
 app.post('/api/admin/adjust-stats', isAdmin, async (req, res) => {
     const { link_id, clicks, installs } = req.body;
-    const targetInstalls = parseInt(installs) || 0;
-    const targetClicks = parseInt(clicks) || 0;
-    const todayStr = getTodayIST();
-
-    try {
-        const { data: currentLink, error: fetchErr } = await supabase
-            .from('links')
-            .select('*')
-            .eq('id', link_id)
-            .single();
-
-        if (fetchErr || !currentLink) {
-            return res.status(404).json({ error: 'Link not found' });
-        }
-
-        const startInstalls = calculateGradualInstalls(currentLink);
-        const diffInstalls = targetInstalls - startInstalls;
-
-        if (diffInstalls <= 1) {
-            await supabase
-                .from('links')
-                .update({ clicks: targetClicks, installs: targetInstalls, target_installs: targetInstalls })
-                .eq('id', link_id);
-
-            await supabase
-                .from('daily_stats')
-                .upsert({ link_id: parseInt(link_id), user_id: currentLink.user_id, stat_date: todayStr, clicks: targetClicks, installs: targetInstalls }, { onConflict: ['link_id', 'stat_date'] });
-
-            return res.json({ success: true, message: 'Stats updated successfully!' });
-        }
-
-        const durationSeconds = 120; // 2 Minutes
-        const startTime = Math.floor(Date.now() / 1000);
-        const endTime = startTime + durationSeconds;
-
-        const { error: updateErr } = await supabase
-            .from('links')
-            .update({ 
-                clicks: targetClicks,
-                installs: startInstalls,
-                target_installs: targetInstalls,
-                gradual_start_installs: startInstalls,
-                gradual_start_time: startTime,
-                gradual_end_time: endTime
-            })
-            .eq('id', link_id);
-
-        if (updateErr) {
-            return res.status(500).json({ error: updateErr.message });
-        }
-
-        await supabase
-            .from('daily_stats')
-            .upsert({ link_id: parseInt(link_id), user_id: currentLink.user_id, stat_date: todayStr, clicks: targetClicks, installs: startInstalls }, { onConflict: ['link_id', 'stat_date'] });
-
-        res.json({ 
-            success: true, 
-            message: `Installs will gradually increase from ${startInstalls} to ${targetInstalls} over the next 2 minutes!` 
-        });
-
-    } catch (err) {
-        console.error("Adjust stats error:", err);
-        res.status(500).json({ error: 'Server error while adjusting stats' });
-    }
+    const { error } = await supabase.from('links').update({ clicks: parseInt(clicks), installs: parseInt(installs) }).eq('id', link_id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
 });
 
 app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
@@ -495,7 +414,7 @@ app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
     }
 });
 
-// --- USER LINKS API WITH DATE FILTERING SUPPORT ---
+// --- USER LINKS API (Pure Data, No Cuts) ---
 app.get('/api/user/links', isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
     let { startDate, endDate } = req.query;
@@ -522,20 +441,10 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
             .eq('user_id', userId);
 
         let allTimeClicks = 0, allTimeInstalls = 0, allTimeGrossEarnings = 0;
-        
-        const processedLinks = links.map(l => {
-            const activeInstalls = calculateGradualInstalls(l);
-            return {
-                ...l,
-                installs: activeInstalls
-            };
-        });
-
         if (allTimeStats) {
             allTimeStats.forEach(d => {
                 const c = d.clicks || 0;
-                const matchedLink = processedLinks.find(l => l.id === d.link_id);
-                const i = matchedLink && d.stat_date === getTodayIST() ? matchedLink.installs : (d.installs || 0);
+                const i = d.installs || 0;
                 const rate = linkRateMap[d.link_id] || 0;
                 allTimeClicks += c;
                 allTimeInstalls += i;
@@ -544,7 +453,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
         }
 
         let filteredClicks = 0, filteredInstalls = 0, filteredEarnings = 0;
-        let finalLinks = processedLinks;
+        let filteredLinks = links;
 
         if (startDate && endDate) {
             const { data: filteredDailyStats } = await supabase
@@ -560,15 +469,12 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
                     if (!dailyMap[d.link_id]) {
                         dailyMap[d.link_id] = { clicks: 0, installs: 0 };
                     }
-                    const matchedLink = processedLinks.find(l => l.id === d.link_id);
-                    const i = (matchedLink && d.stat_date === getTodayIST()) ? matchedLink.installs : (d.installs || 0);
-                    
                     dailyMap[d.link_id].clicks += (d.clicks || 0);
-                    dailyMap[d.link_id].installs += i;
+                    dailyMap[d.link_id].installs += (d.installs || 0);
                 });
             }
 
-            finalLinks = links.map(l => {
+            filteredLinks = links.map(l => {
                 const stats = dailyMap[l.id] || { clicks: 0, installs: 0 };
                 return {
                     ...l,
@@ -579,25 +485,38 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
                 };
             });
 
-            if (filteredDailyStats) {
-                filteredDailyStats.forEach(d => {
-                    const c = d.clicks || 0;
-                    const matchedLink = processedLinks.find(l => l.id === d.link_id);
-                    const i = (matchedLink && d.stat_date === getTodayIST()) ? matchedLink.installs : (d.installs || 0);
-                    const rate = linkRateMap[d.link_id] || 0;
-                    filteredClicks += c;
-                    filteredInstalls += i;
-                    filteredEarnings += (i * rate);
-                });
-            }
+            filteredDailyStats.forEach(d => {
+                const c = d.clicks || 0;
+                const i = d.installs || 0;
+                const rate = linkRateMap[d.link_id] || 0;
+                filteredClicks += c;
+                filteredInstalls += i;
+                filteredEarnings += (i * rate);
+            });
         } else {
             filteredClicks = allTimeClicks;
             filteredInstalls = allTimeInstalls;
             filteredEarnings = allTimeGrossEarnings;
+            
+            const linkClicksMap = {};
+            const linkInstallsMap = {};
+            if (allTimeStats) {
+                allTimeStats.forEach(d => {
+                    if (!linkClicksMap[d.link_id]) linkClicksMap[d.link_id] = 0;
+                    if (!linkInstallsMap[d.link_id]) linkInstallsMap[d.link_id] = 0;
+                    linkClicksMap[d.link_id] += (d.clicks || 0);
+                    linkInstallsMap[d.link_id] += (d.installs || 0);
+                });
+            }
+            filteredLinks = links.map(l => ({
+                ...l,
+                clicks: linkClicksMap[l.id] !== undefined ? linkClicksMap[l.id] : (l.clicks || 0),
+                installs: linkInstallsMap[l.id] !== undefined ? linkInstallsMap[l.id] : (l.installs || 0)
+            }));
         }
 
         res.json({ 
-            links: finalLinks, 
+            links: filteredLinks, 
             stats: { 
                 totalClicks: filteredClicks, 
                 totalInstalls: filteredInstalls, 
@@ -615,7 +534,7 @@ app.get('/api/user/links', isAuthenticated, async (req, res) => {
     }
 });
 
-// --- SHORT URL REDIRECT ROUTE ---
+// --- SHORT URL REDIRECT ROUTE (UNIQUE IP CLICK LOGIC) ---
 app.get('/s/:shortCode', async (req, res) => {
     try {
         const shortCode = req.params.shortCode;
@@ -634,6 +553,7 @@ app.get('/s/:shortCode', async (req, res) => {
 
         const targetUrl = link.target_url.trim();
 
+        // Check if this IP has already clicked this link today
         const { data: existingClick } = await supabase
             .from('link_clicks')
             .select('id')
@@ -642,6 +562,7 @@ app.get('/s/:shortCode', async (req, res) => {
             .gte('created_at', `${todayStr}T00:00:00`)
             .maybeSingle();
 
+        // Agar IP pehle se nahi hai aaj ke din, tabhi unique click count hoga (+1)
         if (!existingClick) {
             await supabase.from('link_clicks').insert([{ link_id: link.id, ip_address: clientIp }]);
 
@@ -714,14 +635,28 @@ app.post('/api/admin/edit-daily-stats', isAdmin, async (req, res) => {
                 }]);
         }
 
-        await supabase
-            .from('links')
-            .update({ 
-                clicks: newClicks, 
-                installs: newInstalls,
-                target_installs: newInstalls 
-            })
-            .eq('id', link_id);
+        const { data: allStats, error: sumErr } = await supabase
+            .from('daily_stats')
+            .select('clicks, installs')
+            .eq('link_id', link_id);
+
+        if (!sumErr && allStats) {
+            let totalLinkClicks = 0;
+            let totalLinkInstalls = 0;
+
+            allStats.forEach(s => {
+                totalLinkClicks += (s.clicks || 0);
+                totalLinkInstalls += (s.installs || 0);
+            });
+
+            await supabase
+                .from('links')
+                .update({ 
+                    clicks: totalLinkClicks, 
+                    installs: totalLinkInstalls 
+                })
+                .eq('id', link_id);
+        }
 
         res.json({ success: true, message: 'Daily stats updated successfully!' });
     } catch (err) {

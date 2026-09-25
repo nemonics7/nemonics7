@@ -25,11 +25,9 @@ app.use(session({
     saveUninitialized: false
 }));
 
-// Helper function for IST Date with 9:30 PM Reset Boundary
+// Helper function for IST Date (YYYY-MM-DD)
 function getTodayIST() {
-    let now = new Date();
-    now.setTime(now.getTime() + (2.5 * 60 * 60 * 1000));
-    return now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 }
 
 // Authentication Middleware
@@ -398,11 +396,83 @@ app.get('/api/admin/all-links', isAdmin, async (req, res) => {
     }
 });
 
+// --- GRADUAL INCREASE LOGIC FOR ADJUST-STATS ---
+const activeGradualUpdates = new Map();
+
 app.post('/api/admin/adjust-stats', isAdmin, async (req, res) => {
     const { link_id, clicks, installs } = req.body;
-    const { error } = await supabase.from('links').update({ clicks: parseInt(clicks), installs: parseInt(installs) }).eq('id', link_id);
-    if (error) return res.status(500).json({ error: error.message });
-    res.json({ success: true });
+    const targetInstalls = parseInt(installs) || 0;
+    const targetClicks = parseInt(clicks) || 0;
+
+    try {
+        const { data: currentLink, error: fetchErr } = await supabase
+            .from('links')
+            .select('installs, clicks')
+            .eq('id', link_id)
+            .single();
+
+        if (fetchErr || !currentLink) {
+            return res.status(404).json({ error: 'Link not found' });
+        }
+
+        const startInstalls = currentLink.installs || 0;
+        const diffInstalls = targetInstalls - startInstalls;
+
+        if (diffInstalls <= 1) {
+            const { error } = await supabase
+                .from('links')
+                .update({ clicks: targetClicks, installs: targetInstalls })
+                .eq('id', link_id);
+
+            if (error) return res.status(500).json({ error: error.message });
+            return res.json({ success: true, message: 'Stats updated successfully!' });
+        }
+
+        await supabase
+            .from('links')
+            .update({ clicks: targetClicks })
+            .eq('id', link_id);
+
+        if (activeGradualUpdates.has(link_id)) {
+            clearInterval(activeGradualUpdates.get(link_id));
+        }
+
+        const durationMs = 2 * 60 * 1000; // 2 Minutes
+        const steps = Math.min(diffInstalls, 20);
+        const intervalTime = durationMs / steps;
+        const incrementPerStep = diffInstalls / steps;
+
+        let currentRunningInstalls = startInstalls;
+        let stepCount = 0;
+
+        const intervalId = setInterval(async () => {
+            stepCount++;
+            if (stepCount >= steps) {
+                currentRunningInstalls = targetInstalls;
+                clearInterval(activeGradualUpdates.get(link_id));
+                activeGradualUpdates.delete(link_id);
+            } else {
+                currentRunningInstalls = Math.round(startInstalls + (incrementPerStep * stepCount));
+            }
+
+            await supabase
+                .from('links')
+                .update({ installs: currentRunningInstalls })
+                .eq('id', link_id);
+
+        }, intervalTime);
+
+        activeGradualUpdates.set(link_id, intervalId);
+
+        res.json({ 
+            success: true, 
+            message: `Installs updating gradually from ${startInstalls} to ${targetInstalls} over the next 2 minutes!` 
+        });
+
+    } catch (err) {
+        console.error("Adjust stats error:", err);
+        res.status(500).json({ error: 'Server error while adjusting stats' });
+    }
 });
 
 app.post('/api/admin/delete-link', isAdmin, async (req, res) => {
@@ -555,7 +625,6 @@ app.get('/s/:shortCode', async (req, res) => {
 
         const targetUrl = link.target_url.trim();
 
-        // Check if this IP has already clicked this link today
         const { data: existingClick } = await supabase
             .from('link_clicks')
             .select('id')
@@ -564,7 +633,6 @@ app.get('/s/:shortCode', async (req, res) => {
             .gte('created_at', `${todayStr}T00:00:00`)
             .maybeSingle();
 
-        // Agar IP pehle se nahi hai aaj ke din, tabhi unique click count hoga (+1)
         if (!existingClick) {
             await supabase.from('link_clicks').insert([{ link_id: link.id, ip_address: clientIp }]);
 

@@ -25,9 +25,11 @@ app.use(session({
     saveUninitialized: false
 }));
 
-// Helper function for IST Date (YYYY-MM-DD)
+// Helper function for IST Date with 9:30 PM Reset Boundary
 function getTodayIST() {
-    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    let now = new Date();
+    now.setTime(now.getTime() + (2.5 * 60 * 60 * 1000));
+    return now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 }
 
 // Authentication Middleware
